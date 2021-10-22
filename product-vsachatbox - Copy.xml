@@ -1,0 +1,2657 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<product productid="vsachatbox" active="1">
+	<title>VSa - ChatBox</title>
+	<description>VSa - ChatBox</description>
+	<version>3.1.6</version>
+	<url>http://www.vbulletin.org/forum/showthread.php?t=235271</url>
+	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=vsachatbox]]></versioncheckurl>
+	<dependencies>
+	</dependencies>
+	<codes>
+		<code version="3.0">
+			<installcode><![CDATA[
+		$vbulletin->db->hide_errors();
+		$vbulletin->db->query_write(" 
+		CREATE TABLE IF NOT EXISTS `". TABLE_PREFIX ."vsa_chatbox` (
+			`id` INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+			`userid` INT(10) NOT NULL,
+			`userip` VARCHAR(20) NOT NULL,
+			`dateline` INT(10) NOT NULL,
+			`message` TEXT NOT NULL,
+			`textprop` TEXT NOT NULL)
+		");
+		$vbulletin->db->show_errors();]]></installcode>
+			<uninstallcode><![CDATA[$vbulletin->db->hide_errors();
+		$vbulletin->db->query_write("DROP TABLE IF EXISTS `" . TABLE_PREFIX . "vsa_chatbox` ");
+		$vbulletin->db->show_errors();]]></uninstallcode>
+		</code>
+	</codes>
+	<templates>
+		<template name="vsa_chatbox" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<vb:if condition="(($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc'))">
+		{vb:stylevar htmldoctype}
+		<html xmlns="http://www.w3.org/1999/xhtml" dir="{vb:stylevar textdirection}" lang="{vb:stylevar languagecode}">
+		<head>
+			{vb:raw headinclude}
+			{vb:raw headinclude_bottom}
+			<title>{vb:raw vboptions.bbtitle} - {vb:rawphrase vsacb_chatbox}</title>
+		</head>
+		<body onload="VSacb_getUsers();">
+		{vb:raw header}
+		{vb:raw navbar}
+	</vb:if>
+
+	<vb:if condition="((($_REQUEST['do']=='cchatbox') OR in_array(THIS_SCRIPT, array($vsacb_locs))) AND ($_REQUEST['do']!='ccarc'))">
+	<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center"><tr><td><br />
+		<div class="blockhead" style="height:16px;padding-{vb:stylevar right}:{vb:math {vb:stylevar padding}/2-1};font-weight:bold">
+			<span style="float:{vb:stylevar right}">
+				<a class="collapse" style="margin-{vb:stylevar left}:15px;position:static" id="collapse_vsacb_boxswitch" href="javascript:void(0);"><img src="{vb:stylevar imgdir_button}/collapse{vb:raw vbcollapse.collapseimg_vsacb_boxsw}_40b.png" alt="" border="0" /></a>
+			</span>
+			<div class="popupmenu" style="float:{vb:stylevar left}">
+				<a href="javascript://" class="popupctrl"><vb:if condition="($_REQUEST['do']!='cchatbox')">{vb:rawphrase vsacb_chatbox}<vb:else />{vb:rawphrase vsacb_chatbox_full}</vb:if>&nbsp;</a>
+				<ul class="popupbody popuphover" style="margin-top:8px;">
+					<vb:if condition="($_REQUEST['do']!='cchatbox')">
+						<li>
+							<a href="misc.php?{vb:raw session.sessionurl}do=cchatbox">{vb:rawphrase vsacb_go_separate}</a>
+						</li>
+					</vb:if>
+					<vb:if condition="($_REQUEST['do']!='ccarc')">
+						<li>
+							<a href="misc.php?{vb:raw session.sessionurl}do=ccarc">{vb:rawphrase vsacb_go_archive}</a>
+						</li>
+					</vb:if>
+					<vb:if condition="($vsacb_totalmessages AND (($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc')))">
+						<li>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_statistics}:</a>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_total_messages}: {vb:raw vsacb_totalmessages}</a>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_last_x_hours_messages, {vb:raw vboptions.vsachatbox_stats_lastxhours}}: {vb:raw vsacb_xhoursmessages}</a>
+							<vb:if condition="$vsacb_mymessages">
+								<a href="misc.php?{vb:raw session.sessionurl}do=ccarc&amp;cbu={vb:raw bbuserinfo.userid}">{vb:rawphrase vsacb_my_messages}: {vb:raw vsacb_mymessages}</a>
+							</vb:if>
+						</li>
+						<vb:if condition="($vsacb_topx_res > 1)">
+						<li>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_top_x_chatters}:</a>
+							{vb:raw vsacb_topchatters}
+						</li>
+						</vb:if>
+					</vb:if>
+					<vb:if condition="($vsacb_banlist)">
+						<li id="vsacb_bannedarea" style="max-height:150px;overflow:auto;">
+							<a href="javascript:void(0);" style="padding-{vb:stylevar right}:25px;">{vb:rawphrase vsacb_banned_list}<vb:if condition="$vsacb_canmod"> ({vb:rawphrase vsacb_unban})</vb:if>:</a>
+							{vb:raw vsacb_banlist}
+						</li>
+					</vb:if>
+					<li>
+						<a href="misc.php?{vb:raw session.sessionurl}ccbfind=unread">{vb:rawphrase vsacb_find_first_unread}</a>
+					</li>
+					<vb:if condition="($bbuserinfo[userid])">
+					<li>
+						<a href="misc.php?{vb:raw session.sessionurl}ccbfind={vb:raw bbuserinfo.userid}">{vb:rawphrase vsacb_find_your_last}</a>
+					</li>
+					</vb:if>
+					<vb:if condition="($vsacb_candelall AND (($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc')))">
+						<li>
+							<a href="javascript:VSacb_Confirm('delsel');">{vb:rawphrase vsacb_mod_options}: {vb:rawphrase vsacb_delete_all}</a>
+						</li>
+					</vb:if>
+				</ul>
+			</div>
+		</div>
+
+		<div id="vsacb_boxswitch" class="blockrow" style="padding:0;<vb:if condition="$vboptions[vsachatbox_collapsed_always]"><vb:if condition="(THIS_SCRIPT!='misc')">display:none</vb:if><vb:else />{vb:raw vbcollapse.collapseobj_vsacb_boxswitch}</vb:if>">
+			<vb:if condition="$vboptions[vsachatbox_pos_statusbar]==1">
+				{vb:raw vsachatbox_status}
+			</vb:if>
+			<vb:if condition="$vboptions[vsachatbox_pos_input]==1">
+				{vb:raw vsachatbox_input}			
+			</vb:if>
+			<div class="blockrow" id="vsacb_messagearea" style="overflow:auto;height:<vb:if condition="($_REQUEST['do']=='cchatbox')">{vb:raw vboptions.vsachatbox_height_full}px<vb:else />{vb:raw vboptions.vsachatbox_height}px</vb:if>;width:auto;font-size:{vb:raw vsacb_textsize}">
+				{vb:rawphrase vsacb_loading}
+			</div>
+			<vb:if condition="$vboptions[vsachatbox_pos_input]==2">
+				{vb:raw vsachatbox_input}			
+			</vb:if>
+			<vb:if condition="$vboptions[vsachatbox_pos_statusbar]==2">
+				{vb:raw vsachatbox_status}
+			</vb:if>
+
+			<vb:if condition="$vboptions[vsachatbox_pos_statusbar]==0">
+				<div style="display:none">{vb:raw vsachatbox_status}</div>
+			</vb:if>
+		</div>
+	<br /></td></tr></table>
+	</vb:if>
+
+	<script language="JavaScript" type="text/javascript">
+	<!--
+		VSacb_nowPosting = false;
+		VSacb_nowLoading = true;
+		VSacb_nowLogged = true;
+		<vb:if condition="($_REQUEST['do']!='ccarc')">
+			VSacb_KickInactive = setTimeout("VSacb_LogInOut('logout');", {vb:raw vboptions.vsachatbox_logout_dur} * 1000 * 60);
+			setTimeout("VSacb_nowLoading = false;VSacb_getMessages();", {vb:raw vboptions.vsachatbox_newmess_dur} * 1000);
+		</vb:if>
+		VSacb_nowRefreshing = null;
+
+		function VSacb_LogInOut(todo)
+		{
+			vsacb_inputfield = fetch_object('vsacb_entermessage');
+			vsacb_actbutton = fetch_object('vsacb_logbutton');
+			vsacb_submitbutton = fetch_object('vsacb_submitbutton');
+			vsacb_selsize = fetch_object('vsacb_m_size');
+			vsacb_actusers = fetch_object('vsacb_actusersarea');
+			if (!VSacb_nowLogged || (todo==''))
+			{
+				VSacb_nowLogged = true;
+				vsacb_actbutton.src="{vb:stylevar imgdir_statusicon}/user-online.png";
+				vsacb_inputfield.disabled = false;
+				vsacb_submitbutton.disabled = false;
+				vsacb_selsize.disabled = false;
+				clearTimeout(VSacb_KickInactive);
+				VSacb_nowPosting = false;
+				VSacb_getMessages();
+				<vb:if condition="(($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc'))">
+				vsacb_actusers.style.display = 'block';
+				VSacb_getUsers();
+				</vb:if>
+			}
+			else
+			{
+				VSacb_nowLogged = false;
+				vsacb_actbutton.src="{vb:stylevar imgdir_statusicon}/user-offline.png";
+				vsacb_inputfield.disabled = true;
+				vsacb_submitbutton.disabled = true;
+				vsacb_selsize.disabled = true;
+				fetch_object('vsacb_infoarea').innerHTML = '{vb:rawphrase vsacb_notlogged, "VSacb_LogInOut();"}';
+				VSacb_nowPosting = true;
+				<vb:if condition="(($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc'))">
+				vsacb_actusers.style.display = 'none';
+				</vb:if>
+			}
+		}
+
+		function VSacb_getMessages()
+		{
+			if (!VSacb_nowPosting)
+			{
+				clearTimeout(VSacb_nowRefreshing);
+				if (VSacb_nowLoading)
+				{
+					fetch_object('vsacb_infoarea').innerHTML = '{vb:raw vsacb_newstat}';
+				}
+				else
+				{
+					fetch_object('vsacb_infoarea').innerHTML = '{vb:rawphrase vsacb_status_refreshing}';
+				}
+				vsacb_Messages = new vB_AJAX_Handler(true);
+				vsacb_Messages.onreadystatechange(VSacb_updateMessages);
+				vsacb_Messages.send('misc.php?{vb:raw session.sessionurl}show=ccbmessages');
+			}
+		}
+
+		function VSacb_updateMessages()
+		{
+			if (vsacb_Messages)
+			{
+				if (vsacb_Messages.handler.readyState == 4 && vsacb_Messages.handler.status == 200 && vsacb_Messages.handler.responseText)
+				{
+					vsacb_MessagesDiv = fetch_object('vsacb_messagearea');
+					vsacb_MessagesDiv.innerHTML = '<table cellpadding="0" cellspacing="0" border="0" width="99%" align="left">' + vsacb_Messages.handler.responseText + '</table>';
+					<vb:if condition="(!$vsacb_cantpost OR ($vsacb_cantpost AND $vboptions[vsachatbox_auto_refresh_guests]))">
+					if (VSacb_nowLogged)
+					{
+						VSacb_nowRefreshing = setTimeout('VSacb_getMessages()', ({vb:raw vboptions.vsachatbox_auto_refresh_messages} * 1000));
+					}
+					</vb:if>
+					<vb:if condition="$vboptions[vsachatbox_reverse_messages]">
+					vsacb_MessagesDiv.scrollTop = vsacb_MessagesDiv.scrollHeight;
+					</vb:if>
+				}
+			}
+
+			if (!VSacb_nowLoading)
+			{
+				if (!VSacb_nowLogged)
+				{
+					fetch_object('vsacb_infoarea').innerHTML = '{vb:rawphrase vsacb_notlogged, "VSacb_LogInOut();"}';
+				}
+				else
+				{
+					fetch_object('vsacb_infoarea').innerHTML = '{vb:rawphrase vsacb_idle}';
+				}
+			}
+			   $(".thuongtin").each(function(){
+				$(this).html(makeRainbow($(this).html()));
+			   });
+		}
+
+		function VSacb_getUsers()
+		{
+			vsacb_Users = new vB_AJAX_Handler(true);
+			vsacb_Users.onreadystatechange(VSacb_updateUsers);
+			vsacb_Users.send('misc.php?{vb:raw session.sessionurl}show=ccbusers');
+		}
+
+		function VSacb_updateUsers()
+		{
+			if (vsacb_Users)
+			{
+				if (vsacb_Users.handler.readyState == 4 && vsacb_Users.handler.status == 200 && vsacb_Users.handler.responseText)
+				{
+					vsacb_UsersDiv = fetch_object('vsacb_actusersarea');
+					vsacb_UsersDiv.innerHTML = '<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">' + vsacb_Users.handler.responseText + '</table>';
+					<vb:if condition="(!$vsacb_cantpost OR ($vsacb_cantpost AND $vboptions[vsachatbox_auto_refresh_guests]))">
+					if (VSacb_nowLogged)
+					{
+						setTimeout('VSacb_getUsers()', ({vb:raw vboptions.vsachatbox_auto_refresh_users} * 1000));
+					}
+					</vb:if>
+				}
+			}
+		}
+
+		function VSacb_getSmilies()
+		{
+			document.getElementById("vsacb_smilies_more").innerHTML = '{vb:rawphrase vsacb_loading}';
+			vsacb_Smilies = new vB_AJAX_Handler(true);
+			vsacb_Smilies.onreadystatechange(VSacb_updateSmilies);
+			vsacb_Smilies.send('misc.php?{vb:raw session.sessionurl}show=ccbsmilies');
+		}
+
+		function VSacb_updateSmilies()
+		{
+			if (vsacb_Smilies)
+			{
+				if (vsacb_Smilies.handler.readyState == 4 && vsacb_Smilies.handler.status == 200 && vsacb_Smilies.handler.responseText)
+				{
+					vsacb_SmiliesDiv = fetch_object('vsacb_smiliesarea');
+					vsacb_SmiliesDiv.innerHTML = '<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">' + vsacb_Smilies.handler.responseText + '</table>';
+					document.getElementById("vsacb_smilies_more").style.display = "none";
+				}
+			}
+		}
+
+		function VSacb_LimitChars(textbox, counter, climit) {
+			field = document.getElementById(textbox);
+			if (field && field.value.length >= climit) {
+				field.value = field.value.substring(0, climit);
+			}
+			vsa_chleftarea = document.getElementById(counter);
+			if (vsa_chleftarea)
+			{
+				vsacb_lengthinfo = climit - field.value.length;
+				if (vsacb_lengthinfo<100 && vsacb_lengthinfo>9)
+				{
+					vsa_chleft = "0"+vsacb_lengthinfo;
+				}
+				else if (vsacb_lengthinfo<10)
+				{
+					vsa_chleft = "00"+vsacb_lengthinfo;
+				}
+				else
+				{
+					vsa_chleft = vsacb_lengthinfo;
+				}
+				vsa_chleftarea.innerHTML = vsa_chleft;
+			}
+		}
+
+		function VSacb_postMessage(formObj)
+		{
+			fetch_object('vsacb_infoarea').innerHTML = '{vb:rawphrase vsacb_status_posting}';
+			vsacb_Message = new vB_AJAX_Handler(true);
+			vsacb_Message.onreadystatechange(VSacb_postedMessage);
+			if (VSacb_nowPosting)
+			{
+				VSacb_nowPosting = false;
+				VSacb_getMessages();
+				return false;
+			}
+			vsacb_NewMessage = formObj.vsacb_entermessage.value;
+			if (vsacb_NewMessage.replace(/ /g, '') == '')
+			{
+				alert('{vb:rawphrase vsacb_must_enter}');
+				return false;
+			}
+			vsacb_Message.send('misc.php', 'do=cb_postnew&vsacb_newmessage=' + PHP.urlencode(vsacb_NewMessage) + VSacb_getMValues(document.forms['vsacb_post_form']));
+			fetch_object('vsacb_entermessage').value = '';
+			fetch_object('vsacb_entermessage').focus();
+			fetch_object('vsacb_counter').innerHTML = '{vb:raw vboptions.vsachatbox_charlimit}';
+			VSacb_nowPosting = true;
+			return false;
+		}
+
+		function VSacb_postedMessage()
+		{
+			if (vsacb_Message.handler.readyState == 4 && vsacb_Message.handler.status == 200)
+			{
+				VSacb_nowPosting = false;
+				clearTimeout(VSacb_KickInactive);
+				VSacb_getMessages();
+			}
+		}
+
+		function VSacb_getMValues(sbForm)
+		{
+			rString = '';
+			inputObjs = sbForm.getElementsByTagName('input');
+			for (i = 0; i < inputObjs.length; i++)
+			{
+				if (inputObjs[i].type == 'hidden' && inputObjs[i].value != '')
+				{
+					rString += '&' + inputObjs[i].name + '=' + PHP.urlencode(inputObjs[i].value);
+				}
+			}
+			return rString;
+		}
+
+		function VSacb_updateInput(sProperty, setting)
+		{
+			VSacb_saveCookie('vsachatbox_' + sProperty, setting);
+			eval('document.forms["vsacb_post_form"].vsacb_entermessage.style.' + sProperty + ' = "' + setting + '"');
+			eval('document.forms["vsacb_post_form"].' + sProperty + '.value = "' + setting + '"');
+		}
+
+		function VSacb_updateColor(color)
+		{
+			document.getElementById('color').value = color;
+			document.getElementById('vsacb_entermessage').style.color = color;
+			document.getElementById('vsacb_m_color').style.backgroundColor = color;
+			document.getElementById('vsacb_colorlink').style.backgroundColor = color;
+			VSacb_saveCookie('vsachatbox_color', color);
+		}
+
+		function VSacb_updateStyle(sProperty)
+		{
+			trueValue = ''
+			switch (sProperty)
+			{
+				case 'fontWeight':
+				falseValue = 'bold'
+				break;
+				case 'textDecoration':
+				falseValue = 'underline'
+				break;
+				case 'fontStyle':
+				falseValue = 'italic'
+				break;
+			}
+			VSacb_saveCookie('vsachatbox_' + sProperty, ((eval('document.forms["vsacb_post_form"].' + sProperty + '.value'))? trueValue : falseValue));
+			return (eval('document.forms["vsacb_post_form"].' + sProperty + '.value'))? trueValue : falseValue;
+		}
+
+		function VSacb_updateSButton(cButton, sProperty)
+		{
+			if (cButton.value.match(/\+/))
+			{
+				cButton.value = cButton.value.replace('+', '')
+			}
+			else
+			{
+				cButton.value = '+' + cButton.value 
+			}
+			VSacb_updateInput(sProperty, VSacb_updateStyle(sProperty));
+		}
+
+		function VSacb_insertSmilie(smcode)
+		{
+			document.forms["vsacb_post_form"].vsacb_entermessage.value += ' ' + smcode;
+			if (VSacb_nowLogged)
+			{
+				document.getElementById('vsacb_entermessage').focus();
+			}
+			return false;
+		}
+
+		function VSacb_saveCookie(name, value)
+		{
+			expires = new Date();
+			expires.setTime(expires.getTime() + (1000 * 86400 * 365));
+			if (value != '')
+			{
+				set_cookie(name, value, expires);
+			}
+			else
+			{
+				delete_cookie(name);
+			}
+			if (name=="vsachatbox_txtsize")
+			{
+				document.getElementById('vsacb_entermessage').style.fontSize = value +"px";
+				document.getElementById('vsacb_messagearea').style.fontSize = value +"px";
+			}
+		}
+
+		function VSacb_readCookies()
+		{
+			<vb:if condition="($vboptions[vsachatbox_colors_enabled] AND !$vsacb_cantpost)">
+			memory_color = fetch_cookie('vsachatbox_color');
+			if (memory_color != null && memory_color != '')
+			{
+				VSacb_updateColor(memory_color);
+			}
+			else
+			{
+				VSacb_updateColor('{vb:raw vsacb_colorfirst}');
+			}
+			</vb:if>
+			memory_bold = fetch_cookie('vsachatbox_fontWeight');
+			memory_underline = fetch_cookie('vsachatbox_textDecoration');
+			memory_italic = fetch_cookie('vsachatbox_fontStyle');
+			if (memory_bold != null && memory_bold != '')
+			{
+				VSacb_updateSButton(fetch_object('vsacb_m_bold'), "fontWeight");
+			}
+			if (memory_underline != null && memory_underline != '')
+			{
+				VSacb_updateSButton(fetch_object('vsacb_m_underline'), "textDecoration");
+			}
+			if (memory_italic != null && memory_italic != '')
+			{
+				VSacb_updateSButton(fetch_object('vsacb_m_italic'), "fontStyle");
+			}
+		}
+
+		function VSacb_delCookies() {
+			delete_cookie('vsachatbox_color');
+			delete_cookie('vsachatbox_fontWeight');
+			delete_cookie('vsachatbox_fontStyle');
+			delete_cookie('vsachatbox_textDecoration');
+
+			fetch_object('color').value = '';
+			fetch_object('fontWeight').value = '';
+			fetch_object('fontStyle').value = '';
+			fetch_object('textDecoration').value = '';
+
+			fetch_object('vsacb_entermessage').style.color = '{vb:raw vsacb_colorfirst}';
+			fetch_object('vsacb_entermessage').style.fontWeight = 'normal';
+			fetch_object('vsacb_entermessage').style.fontStyle = 'normal';
+			fetch_object('vsacb_entermessage').style.textDecoration = 'none';
+
+			<vb:if condition="($vboptions[vsachatbox_colors_enabled] AND !$vsacb_cantpost)">
+			fetch_object('vsacb_m_color').style.backgroundColor = '{vb:raw vsacb_colorfirst}';
+			fetch_object('vsacb_colorlink').style.backgroundColor = '{vb:raw vsacb_colorfirst}';
+			</vb:if>
+			fetch_object('vsacb_m_bold').value = 'B';
+			fetch_object('vsacb_m_italic').value = 'I';
+			fetch_object('vsacb_m_underline').value = 'U';
+		}
+
+		function VSacb_selectAll(obj)
+		{
+			arrInput = document.getElementsByTagName("input");
+			for (i=0; i<arrInput.length; i++) {
+				if (arrInput[i].type == 'checkbox') {
+					arrInput[i].checked = obj.checked;
+				}
+			}
+		}
+
+		function VSacb_Confirm(what,who,name)
+		{
+			if (what=='delsel')
+			{
+				if (confirm('{vb:rawphrase vsacb_confirm_delete_all}'))
+				{
+					if (confirm('{vb:rawphrase vsacb_confirm_delete_all_again}'))
+					{
+					    location.href = "misc.php?{vb:raw session.sessionurl}do=vsacb_delall";
+					}
+				}
+			}
+
+			if (what=='deluser')
+			{
+				if (confirm('{vb:rawphrase vsacb_delete_user} '+name+'?'))
+				{
+				    location.href = 'misc.php?{vb:raw session.sessionurl}do=vsacb_deluser&u='+who;
+				}
+			}
+
+			if (what=='delmess')
+			{
+				if (confirm('{vb:rawphrase vsacb_delete_mess}?'))
+				{
+				    location.href = 'misc.php?{vb:raw session.sessionurl}do=vsacb_delmess&m='+who;
+				}
+			}
+
+			if (what=='banuser')
+			{
+				if (confirm('{vb:rawphrase vsacb_ban_user}: '+name+'?'))
+				{
+				    location.href = 'misc.php?{vb:raw session.sessionurl}do=vsacb_banuser&u='+who;
+				}
+			}
+
+			if (what=='unbanuser')
+			{
+				if (confirm('{vb:rawphrase vsacb_unban_user}: '+name+'?'))
+				{
+				    location.href = 'misc.php?{vb:raw session.sessionurl}do=vsacb_unbanuser&u='+who;
+				}
+			}
+		}
+
+		function VSacb_controlArcMessage()
+		{
+			this.vsacb_msgid = -1;
+			this.active = false;
+		}
+
+		VSacb_nowEditing = false;
+		VSacb_controlArcMessage.prototype.Edit = function (vsacb_msgid)
+		{
+			if (vsacb_msgid != this.vsacb_msgid)
+			{
+				if (this.active)
+				{
+					this.cancelActive(this.vsacb_msgid)
+				}
+				this.active = true;
+				this.vsacb_msgid = vsacb_msgid;
+				fetch_object('vsacb_message_edit_' + this.vsacb_msgid).style.display = 'block';
+				fetch_object('vsacb_message_' + this.vsacb_msgid).style.display = 'none';
+				fetch_object('vsacb_editlink_' + this.vsacb_msgid).style.display = 'none';
+				fetch_object('vsacb_editbutton_' + this.vsacb_msgid).style.display = 'block';
+				fetch_object('vsacb_message_editor_' + this.vsacb_msgid).focus();
+			}
+			return false;
+		}
+
+		VSacb_controlArcMessage.prototype.cancelActive = function (vsacb_msgid)
+		{
+			fetch_object('vsacb_message_edit_' + this.vsacb_msgid).style.display = 'none';
+			fetch_object('vsacb_message_' + this.vsacb_msgid).style.display = 'block';
+			fetch_object('vsacb_editlink_' + this.vsacb_msgid).style.display = 'block';
+			fetch_object('vsacb_editbutton_' + this.vsacb_msgid).style.display = 'none';
+			return false;
+		}
+
+		VSacb_controlArcMessage.prototype.Save = function ()
+		{
+			if (this.active)
+			{
+				vsacb_Message = new vB_AJAX_Handler(true);
+				vsacb_Message.onreadystatechange(VSacb_savedMessage);
+				if (VSacb_nowEditing)
+				{
+					alert('{vb:rawphrase vsacb_busy}');
+					return false;
+				}
+				CBMsg = fetch_object('vsacb_message_editor_' + this.vsacb_msgid).value;
+				if (CBMsg.replace(/ /g, '') == '')
+				{
+					alert('{vb:rawphrase vsacb_must_enter}');
+					return false;
+				}
+				vsacb_Message.send('misc.php?{vb:raw session.sessionurl}', 'do=vsacb_editmessage&id=' + this.vsacb_msgid + '&vsacb_editmessage=' + PHP.urlencode(CBMsg));
+				VSacb_nowEditing = true;
+			}
+			return false;
+		}
+
+		vsacb_MessageID = new VSacb_controlArcMessage;
+
+		function VSacb_savedMessage()
+		{
+			if (vsacb_Message.handler.readyState == 4 && vsacb_Message.handler.status == 200)
+			{
+				VSacb_nowEditing = false;
+				vsacb_MessageID.active = false;
+				fetch_object('vsacb_message_' + vsacb_MessageID.vsacb_msgid).innerHTML = vsacb_Message.handler.responseText;
+				vsacb_MessageID.cancelActive(vsacb_MessageID.vsacb_msgid);
+				vsacb_MessageID.vsacb_msgid = -1;
+			}
+		}
+
+		function VSacb_updateSmiliePreview(smiliesource)
+		{
+			smiliearea = fetch_object("vsacb_smiliepreview");
+			smiliearea.src=smiliesource;
+		}
+
+		<vb:if condition="($_REQUEST['do']!='ccarc')">
+		VSacb_readCookies();
+		VSacb_getMessages();
+		<vb:if condition="$vboptions[vsachatbox_logout_init]">
+			VSacb_LogInOut('logout');
+		</vb:if>
+		</vb:if>
+	-->
+	</script>
+
+	<vb:if condition="($_REQUEST['do']=='ccarc')">
+		<form id="vsacb_search" name="vsacb_search" action="misc.php?{vb:raw session.sessionurl}do=ccarc" method="post">
+		<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+		<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:3px">
+			<tr valign="bottom">
+				<td align="{vb:stylevar left}"><input type="text" class="primary textbox" name="cbt" style="font-size:11px;" size="25" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;" value="{vb:raw vsacb_search_value}" /> <input type="submit" class="button" value="{vb:rawphrase go}" /></td>
+			</tr>
+		</table>
+		</form>
+
+		<form id="vsacb_muldel" name="vsacb_muldel" action="misc.php?{vb:raw session.sessionurl}do=vsacb_multidel" method="post" onsubmit="return confirm('{vb:rawphrase vsacb_confirm_delete}')">
+		<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+		<div class="blockhead" style="height:16px;padding-{vb:stylevar right}:{vb:math {vb:stylevar padding}/2-1};font-weight:bold">
+			<div class="popupmenu" style="float:{vb:stylevar left}">
+				<a href="javascript://" class="popupctrl">{vb:rawphrase vsacb_archive}&nbsp;</a>
+				<ul class="popupbody popuphover" style="margin-top:8px;">
+					<vb:if condition="($_REQUEST['do']!='cchatbox')">
+						<li>
+							<a href="misc.php?{vb:raw session.sessionurl}do=cchatbox">{vb:rawphrase vsacb_go_separate}</a>
+						</li>
+					</vb:if>
+					<vb:if condition="($_REQUEST['do']!='ccarc')">
+						<li>
+							<a href="misc.php?{vb:raw session.sessionurl}do=ccarc">{vb:rawphrase vsacb_go_archive}</a>
+						</li>
+					</vb:if>
+					<vb:if condition="($vsacb_totalmessages AND (($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc')))">
+						<li>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_statistics}:</a>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_total_messages}: {vb:raw vsacb_totalmessages}</a>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_last_x_hours_messages, {vb:raw vboptions.vsachatbox_stats_lastxhours}}: {vb:raw vsacb_xhoursmessages}</a>
+							<vb:if condition="$vsacb_mymessages">
+								<a href="misc.php?{vb:raw session.sessionurl}do=ccarc&amp;cbu={vb:raw bbuserinfo.userid}">{vb:rawphrase vsacb_my_messages}: {vb:raw vsacb_mymessages}</a>
+							</vb:if>
+						</li>
+						<vb:if condition="($vsacb_topx_res > 1)">
+						<li>
+							<a href="javascript:void(0);">{vb:rawphrase vsacb_top_x_chatters}:</a>
+							{vb:raw vsacb_topchatters}
+						</li>
+						</vb:if>
+					</vb:if>
+					<vb:if condition="($vsacb_banlist)">
+						<li id="vsacb_bannedarea" style="max-height:150px;overflow:auto;">
+							<a href="javascript:void(0);" style="padding-{vb:stylevar right}:25px;">{vb:rawphrase vsacb_banned_list}<vb:if condition="$vsacb_canmod"> ({vb:rawphrase vsacb_unban})</vb:if>:</a>
+							{vb:raw vsacb_banlist}
+						</li>
+					</vb:if>
+					<li>
+						<a href="misc.php?{vb:raw session.sessionurl}ccbfind=unread">{vb:rawphrase vsacb_find_first_unread}</a>
+					</li>
+					<vb:if condition="($bbuserinfo[userid])">
+					<li>
+						<a href="misc.php?{vb:raw session.sessionurl}ccbfind={vb:raw bbuserinfo.userid}">{vb:rawphrase vsacb_find_your_last}</a>
+					</li>
+					</vb:if>
+					<vb:if condition="($vsacb_candelall AND (($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc')))">
+						<li>
+							<a href="javascript:VSacb_Confirm('delsel');">{vb:rawphrase vsacb_mod_options}: {vb:rawphrase vsacb_delete_all}</a>
+						</li>
+					</vb:if>
+				</ul>
+			</div>
+		</div>
+		<div style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:1px;border-color:{vb:stylevar shadow_color};border-style:solid;">
+			<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+				<vb:if condition="($vboptions[vsachatbox_auto_prune]!='')">
+				<tr>
+					<td colspan="5">{vb:rawphrase vsacb_autoprune_note, {vb:raw vboptions.vsachatbox_auto_prune}}</td>
+				</tr>
+				</vb:if>
+				<vb:if condition="($vsacb_targettext!='')">
+				<tr>
+					<td colspan="5"><span style="float:{vb:stylevar right}">{vb:rawphrase vsacb_switchtoall}</span>{vb:rawphrase vsacb_showingsearch, {vb:raw vsacb_targettext}}</td>
+				</tr>
+				</vb:if>
+				<vb:if condition="($vsacb_targetuser!='')">
+				<tr>
+					<td colspan="5"><span style="float:{vb:stylevar right}">{vb:rawphrase vsacb_switchtoall}</span>{vb:rawphrase vsacb_showinguser}</td>
+				</tr>
+				</vb:if>
+				<vb:if condition="(($vsacb_totalentries>0) AND $vsacb_msgs_arc_final AND !$_REQUEST['ccbnomess'])">
+				<tr>
+					<td class="blocksubhead">{vb:rawphrase time}</td>
+					<td class="blocksubhead">{vb:rawphrase user}</td>
+					<td class="blocksubhead" align="{vb:stylevar left}">{vb:rawphrase message}</td>
+					<td class="blocksubhead" width="1%" align="{vb:stylevar right}"></td>
+					<td class="blocksubhead" width="1%" align="{vb:stylevar right}">
+						<vb:if condition="($vsacb_canmod AND ($vsacb_totalentries>0))">
+							<input type="checkbox" name="vsacb_checkall" id="vsacb_checkall" value="" onclick="VSacb_selectAll(this);" />
+						</vb:if>
+					</td>
+				</tr>
+				{vb:raw vsacb_msgs_arc_final}
+				<vb:else />
+					<tr>
+						<td class="blocksubhead" width="100%" align="center">{vb:rawphrase vsacb_no_messages}</td>
+					</tr>
+				</vb:if>
+				<vb:if condition="($vsacb_canmod AND ($vsacb_totalentries>0) AND $vsacb_msgs_arc_final AND !$_REQUEST['ccbnomess'])">
+				<tr align="right">
+					<td class="blocksubhead" colspan="5"><input type="submit" class="button" name="vsacb_muldel_submit" value="&nbsp;{vb:rawphrase vsacb_delete_selected}&nbsp;" onclick="confirmation();" /></td>
+				</tr>
+				</vb:if>
+			</table>
+		</div>
+		</form>
+
+		<vb:if condition="($pagenav AND !$_REQUEST['ccbnomess'])">
+			<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:3px">
+				<tr class="blockrow">
+					<td width="100%"><span style="float:{vb:stylevar right}">{vb:raw pagenav}</span></td>
+				</tr>
+			</table>
+		</vb:if>
+	</vb:if>
+
+	<vb:if condition="(($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc'))">
+		<br />
+		<div id="vsacb_actusersarea">&nbsp;</div>
+		<br />
+		{vb:raw footer}
+		</body>
+		</html>
+	</vb:if>]]></template>
+		<template name="vsa_chatbox_archive_bit" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<tr class="blockrow" style="padding:0px;<vb:if condition="($vsacb_msg_arc_nr!=1)">border-top:1px;border-bottom:0px;border-{vb:stylevar left}:0px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shadow_color};border-style:dashed;</vb:if><vb:if condition="($_REQUEST['cm']==$vsacb_msg_arc_id)">background-color:#FFFFCC;color:#000000;</vb:if>">
+		<td class="blockrow" nowrap="nowrap" <vb:if condition="($_REQUEST['cm']==$vsacb_msg_arc_id)">style="background-color:#FFFFCC;color:#000000;"</vb:if>>
+			<a name="{vb:raw vsacb_msg_arc_id}"></a>{vb:raw vsacb_msg_arc_icon} {vb:raw vsacb_msg_arc.time}
+		</td>
+		<td class="blockrow" nowrap="nowrap">
+			<div class="popupmenu" style="float:{vb:stylevar left}">
+			<a href="javascript://" class="popupctrl">{vb:raw vsacb_msg_arc.musername}<vb:if condition="$vsacb_msg_arc_banned">*</vb:if></a>
+			<ul class="popupbody popuphover">
+				<li>
+					{vb:rawphrase options}
+				</li>
+				<li>
+					<a href="member.php?{vb:raw session.sessionurl}u={vb:raw vsacb_msg_arc.userid}">{vb:rawphrase view_profile}</a>
+				</li>
+				<li>
+					<a href="misc.php?{vb:raw session.sessionurl}do=ccarc&amp;cbu={vb:raw vsacb_msg_arc.userid}">{vb:rawphrase vsacb_view_user, {vb:raw vsacb_msg_arc.username}}</a>
+				</li>
+				<li>
+					<a href="misc.php?{vb:raw session.sessionurl}ccbfind={vb:raw vsacb_msg_arc.userid}">{vb:rawphrase vsacb_goto_last, {vb:raw vsacb_msg_arc.username}}</a>
+				</li>
+				<vb:if condition="(($_REQUEST['cbu']!='') OR ($vsacb_targettext!=''))">
+				<li>
+					<a href="misc.php?{vb:raw session.sessionurl}ccbloc={vb:raw vsacb_msg_arc_id}">{vb:rawphrase vsacb_loc_message, {vb:raw vsacb_msg_arc.username}}</a>
+				</li>
+				</vb:if>
+				<vb:if condition="($vsacb_canmod)">
+				<li>
+					{vb:rawphrase vsacb_mod_options}
+				</li>
+				<vb:if condition="$vsacb_msg_arc[userip]">
+					<li>
+						<a href="online.php?{vb:raw session.sessionurl}do=resolveip&amp;ipaddress={vb:raw vsacb_msg_arc.userip}">IP: {vb:raw vsacb_msg_arc.userip}</a>
+					</li>
+				</vb:if>
+				<vb:if condition="!$vsacb_msg_arc_staff">
+					<li>
+						<vb:if condition="$vsacb_msg_arc_banned">
+							<a href="javascript:VSacb_Confirm('unbanuser','{vb:raw vsacb_msg_arc.userid}','{vb:raw vsacb_msg_arc.username}');">{vb:rawphrase vsacb_unban_user}: {vb:raw vsacb_msg_arc.username}</a>
+						<vb:else />
+							<a href="javascript:VSacb_Confirm('banuser','{vb:raw vsacb_msg_arc.userid}','{vb:raw vsacb_msg_arc.username}');">{vb:rawphrase vsacb_ban_user}: {vb:raw vsacb_msg_arc.username}</a>
+						</vb:if>
+					</li>
+				</vb:if>
+				<li>
+					<a href="javascript:VSacb_Confirm('deluser','{vb:raw vsacb_msg_arc.userid}','{vb:raw vsacb_msg_arc.username}');">{vb:rawphrase vsacb_delete_user} {vb:raw vsacb_msg_arc.username}</a>
+				</li>
+			</vb:if>
+			<vb:if condition="((($bbuserinfo[userid]==$vsacb_msg_arc[userid]) AND $vboptions[vsachatbox_users_candelete]) OR $vsacb_canmod)">
+				<li>
+					<a href="javascript:VSacb_Confirm('delmess','{vb:raw vsacb_msg_arc_id}');">{vb:rawphrase vsacb_delete_mess}</a>
+				</li>
+			</vb:if>
+			</ul>
+			</div>
+		</td>
+		<td class="blockrow" id="vsacb_{vb:raw vsacb_msg_arc_id}" align="{vb:stylevar right}">
+			<table cellpadding="0" cellspacing="0" border="0" width="100%">
+				<tr>
+					<td align="{vb:stylevar left}">
+						<div id="vsacb_message_{vb:raw vsacb_msg_arc_id}">
+							{vb:raw vsacb_msg_arc_parsed}
+						</div>
+					</td>
+					<vb:if condition="((($bbuserinfo[userid]==$vsacb_msg_arc[userid]) AND $vsacb_canedit) OR $vsacb_canmod)">
+						<td class="blockrow" align="{vb:stylevar left}" nowrap="nowrap">
+							<span id="vsacb_message_edit_{vb:raw vsacb_msg_arc_id}" style="display:none;">
+								<textarea name="vsacb_textfield" style="width:95%;height:50px;" id="vsacb_message_editor_{vb:raw vsacb_msg_arc_id}" onkeydown="if (event.keyCode == 13) {return vsacb_MessageID.Save();}" rows="1" cols="1">{vb:raw vsacb_msg_arc.message}</textarea>
+							</span>
+						</td>
+					</vb:if>
+				</tr>
+			</table>
+		</td>
+		<td class="blockrow" nowrap="nowrap" align="{vb:stylevar right}">
+			<vb:if condition="((($bbuserinfo[userid]==$vsacb_msg_arc[userid]) AND $vsacb_canedit) OR $vsacb_canmod)">
+				<div id="vsacb_editlink_{vb:raw vsacb_msg_arc_id}" style="display:block;"><a href="javascript:void(0);" onclick="return vsacb_MessageID.Edit({vb:raw vsacb_msg_arc_id});">{vb:rawphrase edit}&nbsp;</a></div><div id="vsacb_editbutton_{vb:raw vsacb_msg_arc_id}" style="display:none;"><input type="button" class="button" onclick="vsacb_MessageID.Save()" value="{vb:rawphrase done}" accesskey="s" />&nbsp;</div>
+			</vb:if>
+		</td>
+
+		<td class="blockrow">
+			<vb:if condition="($vsacb_canmod AND ($vsacb_totalentries>0))">
+				<input type="checkbox" name="cbdel[{vb:raw vsacb_msg_arc_id}]" value="{vb:raw vsacb_msg_arc_id}" />
+			</vb:if>
+		</td>
+	</tr>]]></template>
+		<template name="vsa_chatbox_bit" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<tr valign="top">
+		<td <vb:if condition="!$vboptions[vsachatbox_align_username]">width="1%"</vb:if>>
+			<span style="margin:0px;white-space:nowrap;font-size:{vb:raw vsacb_textsize}">
+				<span class="shade" style="margin:0px"><a href="{vb:raw vboptions.bburl}/misc.php?{vb:raw session.sessionurl}ccbloc={vb:raw vsacb_msg_box_id}" style="text-decoration:none;" title="{vb:rawphrase vsacb_loc_message}">{vb:raw vsacb_msg_box_icon}</a> <vb:if condition="$vboptions[vsachatbox_time_enable]">[{vb:raw vsacb_msg_box.time}]</vb:if></span>&nbsp;<a href="member.php?{vb:raw session.sessionurl}u={vb:raw vsacb_msg_box.userid}">{vb:raw vsacb_msg_box.musername}</a><vb:if condition="($vsacb_msg_box_banned AND $vsacb_canmod)">*</vb:if><span class="shade" style="margin-{vb:stylevar right}:7px">:</span>
+			</span>
+		<vb:if condition="$vboptions[vsachatbox_align_username]">
+			<span style="width:100%;margin:0px;font-size:{vb:raw vsacb_textsize}">{vb:raw vsacb_msg_box_parsed}</span>
+		<vb:else />
+		</td>
+		<td style="font-size:{vb:raw vsacb_textsize}">
+			{vb:raw vsacb_msg_box_parsed}
+		</td>
+		</vb:if>
+	</tr>]]></template>
+		<template name="vsa_chatbox_input" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<form name="vsacb_post_form" action="misc.php?{vb:raw session.sessionurl}&amp;securitytoken={vb:raw bbuserinfo.securitytoken}" method="post" onsubmit="return VSacb_postMessage(this);">
+		<input type="hidden" name="do" id="do" value="cb_postnew" />
+		<input type="hidden" name="color" id="color" value="{vb:raw vsacb_colorfirst}" />
+		<input type="hidden" name="fontWeight" id="fontWeight" />
+		<input type="hidden" name="fontStyle" id="fontStyle" />
+		<input type="hidden" name="textDecoration" id="textDecoration" />
+	<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+		<tr>
+			<td width="1%" class="blocksubhead" style="margin:0px;white-space:nowrap;padding-{vb:stylevar right}:1px">
+				<vb:if condition="!$vsacb_cantpost">
+					<img class="inlineimg" style="cursor:pointer" id="vsacb_logbutton" src="{vb:stylevar imgdir_statusicon}/user-online.png" border="0" alt="{vb:rawphrase vsacb_click_log}" onclick="VSacb_LogInOut();" /><img src="{vb:stylevar imgdir_editor}/separator.gif" border="0" alt="" style="padding-{vb:stylevar left}:{vb:math {vb:stylevar padding}/2-1}" />
+				<vb:else />
+					<img class="inlineimg" id="vsacb_logbutton" src="{vb:stylevar imgdir_statusicon}/user-online.png" border="0" alt="" /><img src="{vb:stylevar imgdir_editor}/separator.gif" border="0" alt="" style="padding-{vb:stylevar left}:{vb:math {vb:stylevar padding}/2-1}" />
+				</vb:if>
+			</td>
+			<vb:if condition="!$vsacb_cantpost AND $vsacb_colors">
+				<td width="1%" class="blocksubhead" style="padding-{vb:stylevar left}:4px;padding-{vb:stylevar right}:4px;" title="{vb:rawphrase vsacb_colors}">
+					<span class="popupmenu colors">
+						<a id="vsacb_colorlink" href="javascript://" class="popupctrl" style="padding:0px;background-color:{vb:raw vsacb_colorfirst};border:1px solid #ACA899;"><span id="vsacb_m_color" style="padding-{vb:stylevar left}:14px;">&nbsp;</span></a>
+						<vb:if condition="!$vsacb_cantpost">
+							<ul id="vsacb_colormenu" class="popupbody popuphover" style="margin-top:8px;">
+								<li>
+									{vb:raw vsacb_colors}
+								</li>
+							</ul>
+						</vb:if>
+					</span>
+				</td>
+			</vb:if>
+			<td width="1%" class="blocksubhead" style="margin:0px;padding-{vb:stylevar left}:1px;white-space:nowrap;">
+				<input id="vsacb_m_bold" type="button" class="button" style="width:30px;font-weight:bold;" value="B" onclick='VSacb_updateSButton(this, "fontWeight")' <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> />
+				<input id="vsacb_m_italic" type="button" class="button" style="width:30px;font-style:italic;" value="I" onclick='VSacb_updateSButton(this, "fontStyle")' <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> />
+				<input id="vsacb_m_underline" type="button" class="button" style="width:30px;text-decoration:underline;" value="U" onclick='VSacb_updateSButton(this, "textDecoration")' <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> />
+				<img src="{vb:stylevar imgdir_editor}/separator.gif" border="0" alt="" /><img class="inlineimg" style="cursor:pointer" src="{vb:stylevar imgdir_editor}/removeformat.png" border="0" alt="{vb:rawphrase vsacb_remove_formatting}" onclick="VSacb_delCookies();" />
+			</td>
+			<vb:if condition="(($vboptions[vsachatbox_smiliestotal]!=0) AND !$vsacb_cantpost AND $vsacb_smilies_init)">
+			<td width="1%" class="blocksubhead" style="margin:0px;padding-{vb:stylevar left}:0px;padding-{vb:stylevar right}:0px;">
+				<span class="popupmenu colors">
+					<a href="javascript://" class="popupctrl" onclick="javascript: if (VSacb_nowLogged) { document.getElementById('vsacb_entermessage').focus(); } return false;" style="padding:0px;"><img class="inlineimg" src="{vb:stylevar imgdir_editor}/smilie.gif" alt="{vb:rawphrase smilies}" border="0" /></a>
+					<ul class="popupbody popuphover" style="margin-top:10px;">
+						<li>
+							<div id="vsacb_smiliesarea" style="max-height:200px;overflow:auto;border-top:0px;border-bottom:0px;border-{vb:stylevar left}:0px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shadow_color};border-style:dashed;">
+									{vb:raw vsacb_smilies_init}
+							</div>
+							<div align="center" style="padding:4px;border-top:1px;border-bottom:0px;border-{vb:stylevar left}:0px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shadow_color};border-style:dashed;">
+								<span id="vsacb_smilies_more" style="display:block;float:{vb:stylevar right};">
+									<a href="javascript:void(0);" onclick="VSacb_getSmilies();" style="text-decoration:none;">{vb:rawphrase more}</a>
+								</span>
+								<img id="vsacb_smiliepreview" src="{vb:raw vsacb_smilie_first}" border="0" alt="" />
+							</div>
+						</li>
+					</ul>
+				</span>
+			</td>
+			</vb:if>
+			<td class="blocksubhead" style="margin:0px;">
+				<input type="text" class="primary textbox" name="vsacb_entermessage" id="vsacb_entermessage" style="width:100%;font-size:{vb:raw vsacb_textsize};color:{vb:raw vsacb_colorfirst}" onkeydown="if (event.keyCode == 13) {return VSacb_postMessage(vsacb_post_form);}" onkeyup="VSacb_LimitChars('vsacb_entermessage', 'vsacb_counter','{vb:raw vboptions.vsachatbox_charlimit}');" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;vsacb_submitbutton.disabled=false;" <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> value="{vb:rawphrase message}..." />
+			</td>
+			<vb:if condition="!$vsacb_cantpost">
+			<td width="1%" class="blocksubhead" style="margin:0px;white-space:nowrap;">
+				<span class="shade" id="vsacb_counter">{vb:raw vboptions.vsachatbox_charlimit}</span> <input type="submit" class="button" id="vsacb_submitbutton" style="width:30px;font-family:Arial;" value="&#9658;" disabled="disabled" />
+			</td>
+			</vb:if>
+		</tr>
+	</table>
+	</form>]]></template>
+		<template name="vsa_chatbox_status" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<form id="vsacb_search" name="vsacb_search" action="misc.php?{vb:raw session.sessionurl}do=ccarc" method="post">
+		<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+			<tr class="blocksubhead" style="margin:0px;">
+				<td class="blocksubhead" align="{vb:stylevar left}">
+					<select id="vsacb_m_size" name="vsacb_m_size" onchange="return VSacb_saveCookie('vsachatbox_txtsize', this.value);">
+						{vb:raw vsacb_sizes}
+					</select>
+					<span <vb:if condition="!$vboptions[vsachatbox_status_enable]">style="display:none"</vb:if>>
+					<img src="{vb:stylevar imgdir_editor}/separator.gif" border="0" alt="" />				
+					{vb:rawphrase vsacb_status}: <span id="vsacb_infoarea" class="shade">{vb:rawphrase vsacb_loading}</span></span>
+				</td>
+				<td class="blocksubhead" align="{vb:stylevar right}" style="margin:0px;">
+					<vb:if condition="($_REQUEST['do']!='ccarc')">
+						<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+						<input type="text" class="primary textbox" name="cbt" size="20" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;" value="{vb:rawphrase vsacb_search_chatbox}" <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> /> <input type="submit" class="button" value="{vb:rawphrase go}" <vb:if condition="$vsacb_cantpost">disabled="disabled"</vb:if> />
+					</vb:if>
+				</td>
+			</tr>
+		</table>
+	</form>]]></template>
+		<template name="vsa_chatbox_topchatters_bit" templatetype="template" date="1267017975" username="Valter" version="3.1.6"><![CDATA[
+	<a href="javascript:void(0);">{vb:raw vsacb_topposternr}. {vb:raw vsacb_topposter.username} ({vb:raw vsacb_topposter.vsacb_msgs})</a>]]></template>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>VSa - ChatBox - CT</title>
+			<hookname>cache_templates</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsachatbox_script_locs']!='')
+		{
+			eval('$vsacb_locs = in_array(THIS_SCRIPT, array(misc,' . $vbulletin->options['vsachatbox_script_locs'] . '));');
+		}
+		else
+		{
+			eval('$vsacb_locs = !in_array(THIS_SCRIPT, array(vsachatbox));');
+		}
+
+		$vsacb_hasenoughposts = true;
+		if (($vbulletin->userinfo['posts'] < $vbulletin->options['vsachatbox_excluded_pc']) AND !can_moderate())
+		{
+			$vsacb_hasenoughposts = false;
+		}
+
+		if ($vbulletin->options['vsachatbox_enable_product'] AND in_array(THIS_SCRIPT, array($vsacb_locs)) AND $vsacb_hasenoughposts)
+		{
+			$cache = array_merge($cache, array('vsa_chatbox', 'vsa_chatbox_input', 'vsa_chatbox_status', 'vsa_chatbox_bit', 'vsa_chatbox_archive_bit', 'vsa_chatbox_topchatters_bit'));
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - ChatBox - IL</title>
+			<hookname>global_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsachatbox_enable_product'])
+		{
+			if ($vbulletin->options['vsachatbox_script_locs']!='')
+			{
+				eval('$vsacb_locs = in_array(THIS_SCRIPT, array(misc,' . $vbulletin->options['vsachatbox_script_locs'] . '));');
+			}
+			else
+			{
+				eval('$vsacb_locs = !in_array(THIS_SCRIPT, array(vsachatbox));');
+			}
+
+			if (!function_exists('VSacb_userExcluded'))
+			{
+				function VSacb_userExcluded($vsacb_user)
+				{
+					return (VSacb_checkExcluded($vsacb_user['userid'], 'vsachatbox_excluded_users') || VSacb_checkExcluded($vsacb_user['usergroupid'], 'vsachatbox_excluded_groups'));	
+				}
+			}
+
+			if (!function_exists('VSacb_checkExcluded'))
+			{
+				function VSacb_checkExcluded($vsacb_exc1, $vsacb_exc2)
+				{
+					global $vbulletin;
+					return in_array($vsacb_exc1, iif($vbulletin->options[$vsacb_exc2], explode(',', $vbulletin->options[$vsacb_exc2]), array()));
+				}
+			}
+
+			if (!function_exists('VSacb_RGBtoHex'))
+			{
+				function VSacb_RGBtoHex($par)
+				{
+					if (stristr($par, "rgb"))
+					{
+						$trash = array('rgb(',')',' ');
+						$req = str_ireplace($trash, "", $par);
+						$val = explode(",", $req);
+						$str = '';
+						foreach($val as $c)
+						{
+							$str .= substr(sprintf('0%x',$c),-2);
+						}
+						return '#'.$str;
+					}
+					else
+					{
+						return $par;
+					}
+				}
+			}
+
+				$vsacb_hasenoughposts = true;
+			if (($vbulletin->userinfo['posts'] < $vbulletin->options['vsachatbox_excluded_pc']) AND !can_moderate())
+			{
+				$vsacb_hasenoughposts = false;
+			}
+
+			if (in_array(THIS_SCRIPT, array($vsacb_locs)) AND !VSacb_userExcluded($vbulletin->userinfo) AND empty($vbulletin->userinfo['infractiongroupids']) AND $vsacb_hasenoughposts)
+			{
+				$vsacb_canmod = false;
+				if (is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsachatbox_can_mod'])))
+				{
+					$vsacb_canmod = true;
+				}
+
+				$vsacb_canedit = true;
+
+				if (is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsachatbox_cannot_edit'])) OR VSacb_userExcluded($vbulletin->userinfo))
+				{
+					$vsacb_canedit = false;
+				}
+
+				if ($vbulletin->options['vsachatbox_canviewonly']!='')
+				{
+					$vsachatbox_cantpost = '1,'.$vbulletin->options['vsachatbox_canviewonly'];
+				}
+				else
+				{
+					$vsachatbox_cantpost = '1';
+				}
+				$vsacb_cantpost = false;
+				if (is_member_of($vbulletin->userinfo, explode(',', $vsachatbox_cantpost)))
+				{
+					$vsacb_cantpost = true;
+				}
+
+				if ($vbulletin->options['vsachatbox_smiliestotal']!=0)
+				{
+					if ($vbulletin->options['vsachatbox_smilies_random'])
+					{
+						$vsacb_ordsmil = "ORDER BY RAND()";
+					}
+					else
+					{
+						$vsacb_ordsmil = "ORDER BY imagecategory.displayorder, imagecategory.title, smilie.displayorder";
+					}
+
+					$vbulletin->db->hide_errors();
+					$vsacb_get_smilies = $vbulletin->db->query_read_slave("
+						SELECT smilieid, smilietext, smiliepath, smilie.title, imagecategory.title AS category
+						FROM " . TABLE_PREFIX . "smilie AS smilie
+						LEFT JOIN " . TABLE_PREFIX . "imagecategory AS imagecategory USING(imagecategoryid)
+						$vsacb_ordsmil
+						LIMIT 0, ".$vbulletin->options['vsachatbox_smiliesinit']."
+					");
+					$vsacb_smilies_total = $vbulletin->db->num_rows($vsacb_get_smilies);
+					$vbulletin->db->data_seek($vsacb_get_smilies, 0);
+					$vsacb_i = 0;
+					$vsacb_smilie_bit = array();
+					while ($vsacb_smilie = $vbulletin->db->fetch_array($vsacb_get_smilies) AND ($vsacb_i++ < $vsacb_smilies_total))
+					{
+						$vsacb_smilie_id += 1;
+						if ($vsacb_smilie_id==1)
+						{
+							$vsacb_smilie_first = $vsacb_smilie['smiliepath'];
+						}
+
+						$vsacb_smilie_html = '<a style="display:block;margin:2px;overflow:hidden;width:'.$vbulletin->options['vsachatbox_smiliesclip'].'px;height:'.$vbulletin->options['vsachatbox_smiliesclip'].'px;" href="javascript:void(0);" onclick="return VSacb_insertSmilie(\''.str_replace("'", "\'", $vsacb_smilie['smilietext']).'\')"><img onmouseover="return VSacb_updateSmiliePreview(this.src);" src="'.$vsacb_smilie['smiliepath'].'" alt="'.$vsacb_smilie['title'].'" border="0" /></a>';
+						$vsacb_smilie_bit[] = '<td>'.$vsacb_smilie_html.'</td>';
+						if (sizeof($vsacb_smilie_bit) == $vbulletin->options['vsachatbox_smiliesperrow'])
+						{
+							$vsacb_smilie_cell = implode('', $vsacb_smilie_bit);
+							$vsacb_smilie_bits .= '<tr align="center">'.$vsacb_smilie_cell.'</tr>';
+							$vsacb_smilie_bit = array();
+						}
+					}
+					$vsacb_smilies_remaining = sizeof($vsacb_smilie_bit);
+					if ($vsacb_smilies_remaining > 0)
+					{
+						$vsacb_smilies_colrem = $vbulletin->options['vsachatbox_smiliesperrow'] - $vsacb_smilies_remaining;
+						$vsacb_smilie_bit[] = '<td colspan="'.$vsacb_smilies_colrem.'">&nbsp;</td>';
+						$vsacb_smilie_cell = implode('', $vsacb_smilie_bit);
+						$vsacb_smilie_bits .= '<tr align="center" valign="bottom">'.$vsacb_smilie_cell.'</tr>';
+					}
+					$vbulletin->db->show_errors();
+					unset($vsacb_get_smilies, $vsacb_smilie);
+					$vsacb_smilies_init = '<table cellpadding="0" cellspacing="0" border="0" align="center">'.$vsacb_smilie_bits.'</table>';
+				}
+
+				$vbulletin->db->hide_errors();
+				$vsacb_get_newstat = $vbulletin->db->query_read("
+					SELECT id
+					FROM " . TABLE_PREFIX . "vsa_chatbox AS vsa_chatbox
+					WHERE dateline > '".$vbulletin->userinfo['lastvisit']."'
+				");
+				$vbulletin->db->show_errors();
+				if ($vbulletin->db->num_rows($vsacb_get_newstat)>0)
+				{
+					$vsacb_newstat = construct_phrase($vbphrase['vsacb_x_new_messages'], $vbulletin->db->num_rows($vsacb_get_newstat));
+				}
+				else
+				{
+					$vsacb_newstat = $vbphrase['vsacb_no_new_messages'];
+				}
+
+				if (vB_Template_Runtime::fetchStyleVar('body_color'))
+				{
+					$vsacb_colorfirstp = vB_Template_Runtime::fetchStyleVar('body_color');
+				}
+				else
+				{
+					$vsacb_color_acplist = explode(",",str_replace(" ","",$vbulletin->options['vsachatbox_textcolors']));
+					$vsacb_colorfirstp = $vsacb_color_acplist[0];
+				}
+				$vsacb_colorfirst = VSacb_RGBtoHex($vsacb_colorfirstp);
+
+				if ($vbulletin->options['vsachatbox_colors_enabled'])
+				{
+					$vsacb_colors_list = $vsacb_colorfirst.','.str_replace(" ","",$vbulletin->options['vsachatbox_textcolors']);
+					$vsacb_get_colors = explode(",", $vsacb_colors_list);
+					$vsacb_colors_total = sizeof($vsacb_get_colors);
+					$vsacb_color_bit = array();
+					foreach ($vsacb_get_colors AS $vsacb_color)
+					{
+						$vsacb_color_html = '<a style="display:block;margin:2px;overflow:hidden;border:1px solid #ACA899;width:10px;height:10px;background-color:'.$vsacb_color.'" href="javascript:void(0);" onclick="VSacb_updateColor(\''.$vsacb_color.'\');">&nbsp;</a>';
+						$vsacb_color_bit[] = '<td class="colorbutton">'.$vsacb_color_html.'</td>';
+						if (sizeof($vsacb_color_bit) == 8)
+						{
+							$vsacb_color_cell = implode('', $vsacb_color_bit);
+							$vsacb_color_bits .= '<tr align="center">'.$vsacb_color_cell.'</tr>';
+							$vsacb_color_bit = array();
+						}
+					}
+					$vsacb_colors_remaining = sizeof($vsacb_color_bit);
+					if ($vsacb_colors_remaining > 0)
+					{
+						$vsacb_colors_colrem = 8 - $vsacb_colors_remaining;
+						$vsacb_color_bit[] = '<td class="colorbutton" colspan="'.$vsacb_colors_colrem.'">&nbsp;</td>';
+						$vsacb_color_cell = implode('', $vsacb_color_bit);
+						$vsacb_color_bits .= '<tr align="center">'.$vsacb_color_cell.'</tr>';
+					}
+					unset($vsacb_get_colors, $vsacb_color);
+					$vsacb_colors = '<table cellpadding="0" cellspacing="0" border="0" align="center">'.$vsacb_color_bits.'</table>';
+				}
+
+				$vbulletin->input->clean_gpc('c', 'vsachatbox_txtsize', TYPE_UINT);
+				$vsacb_textsize_p = $vbulletin->GPC['vsachatbox_txtsize'];
+
+				if (!$vsacb_textsize_p)
+				{
+					$vsacb_textsize_p = 11;
+				}
+
+				$vsacb_sizelist = explode(',',str_replace(' ', '', $vbulletin->options['vsachatbox_textsizes']));
+				foreach ($vsacb_sizelist AS $vsacb_size)
+				{
+					eval('$vsacb_sizes .= " <option value=\"'.$vsacb_size.'\" " . iif($vsacb_textsize_p==$vsacb_size," selected=\"selected\"","").">'.$vsacb_size.'px</option> "."\n";');
+				}
+				$vsacb_textsize = $vsacb_textsize_p.'px';
+
+				$templater = vB_Template::Create('vsa_chatbox_input');
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$templater->register('vsacb_smilies_init', $vsacb_smilies_init);
+				$templater->register('vsacb_colors', $vsacb_colors);
+				$templater->register('vsacb_smilie_first', $vsacb_smilie_first);
+				$templater->register('vsacb_textsize', $vsacb_textsize);
+				$templater->register('vsacb_colorfirst', $vsacb_colorfirst);
+				$vsachatbox_input = $templater->render();
+
+				$templater = vB_Template::Create('vsa_chatbox_status');
+				$templater->register('vsacb_sizes', $vsacb_sizes);
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$vsachatbox_status = $templater->render();
+
+				$templater = vB_Template::Create('vsa_chatbox');
+				$templater->register('vsachatbox_input', $vsachatbox_input);
+				$templater->register('vsachatbox_status', $vsachatbox_status);
+				$templater->register('vsacb_locs', $vsacb_locs);
+				$templater->register('vsacb_newstat', $vsacb_newstat);
+				$templater->register('vsacb_textsize', $vsacb_textsize);
+				$templater->register('vsacb_colorfirst', $vsacb_colorfirst);
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$templater->register('vsacb_canmod', $vsacb_canmod);
+				$vsachatbox = $templater->render();
+
+				$vsachatbox_man['vsachatbox'] = $templater->render();
+				vB_Template::preRegister('footer', $vsachatbox_man);
+				vB_Template::preRegister('FORUMHOME', $vsachatbox_man);
+
+				if ($vbulletin->options['vsachatbox_template_locs']!='')
+				{
+					$vsacb_templatelist_get = explode(',',$vbulletin->options['vsachatbox_template_locs']);
+					foreach ($vsacb_templatelist_get AS $vsacb_templatelist_item)
+					{
+						$vsacb_templatelist = ','.vB_Template::preRegister($vsacb_templatelist_item, $vsachatbox_man);		
+					}
+					$vsacb_templatelist = substr($vsacb_templatelist, 1);
+				}
+
+				if (THIS_SCRIPT!='misc')
+				{
+					switch ($vbulletin->options['vsachatbox_page_loc'])
+					{
+						case 0: break;
+						case 1: $ad_location['global_below_navbar'] .= $vsachatbox; break;
+						case 2: $template_hook['forumhome_below_forums'] .= $vsachatbox; break;
+						case 3: $footer = $vsachatbox.$footer; break;
+					}
+				}
+
+				if (($vbulletin->options['vsachatbox_auto_prune']>0) AND $vbulletin->userinfo['userid'])
+				{
+					$vsacb_prunetime = TIMENOW - ($vbulletin->options['vsachatbox_auto_prune'] * 3600);
+					$vbulletin->db->hide_errors();
+					$vbulletin->db->query_write(" DELETE FROM " . TABLE_PREFIX . "vsa_chatbox WHERE dateline < '".$vsacb_prunetime."' ");
+					$vbulletin->db->show_errors();
+				}
+			}
+
+			if (!VSacb_userExcluded($vbulletin->userinfo) AND empty($vbulletin->userinfo['infractiongroupids']) AND !$vsacb_cantpost)
+			{
+				$vsacb_navbarlink = "<li><a href=\"misc.php?".$session['sessionurl_q']."do=cchatbox\">".$vbphrase['vsacb_chatbox_full']."</a></li>";
+
+				if ($vbulletin->options['vsachatbox_autoinsertlink'])
+				{
+					$template_hook['navbar_end'] .= $vsacb_navbarlink;
+				}
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - ChatBox - MN</title>
+			<hookname>misc_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsachatbox_enable_product'] AND !VSacb_userExcluded($vbulletin->userinfo) AND empty($vbulletin->userinfo['infractiongroupids']) AND $vsacb_hasenoughposts)
+		{
+			function VSacb_buildTime($vsacb_reqtime = TIMENOW)
+			{
+				global $vbulletin;
+				$vsacb_time = '';
+				if ($vbulletin->options['vsachatbox_dateformat']!='')
+				{
+					$vsacb_time = vbdate($vbulletin->options['vsachatbox_dateformat'], $vsacb_reqtime);
+					$vsacb_time .= ', ';
+				}
+				$vsacb_time .= vbdate($vbulletin->options['vsachatbox_timeformat'], $vsacb_reqtime);
+				return $vsacb_time;
+			}
+
+			function VSacb_clickableLinks($vsacb_text)
+			{
+			    $vsacb_text = preg_replace("/(\r\n|\n|\r)/", "\n", $vsacb_text);
+			    $vsacb_lines = explode("\n", $vsacb_text);
+			    for ($x = 0, $y = count($vsacb_lines); $x < $y; $x++) {
+			        $vsacb_line = $vsacb_lines[$x];
+			        $vsacb_words = explode(' ', $vsacb_line);
+			        for ($vsacb_i = 0, $j = count($vsacb_words); $vsacb_i < $j; $vsacb_i++) {
+			            $vsacb_word = $vsacb_words[$vsacb_i];
+			            $vsacb_punctuation = '.,\'")(<>;:';
+			            if (substr($vsacb_word, 0, 7) == 'http://' || 
+			                    substr($vsacb_word, 0, 4) == 'www.') {
+			                $trailing = '';
+			                $vsacb_last = substr($vsacb_word, -1);
+			                while (strpos($vsacb_punctuation, $vsacb_last) !== false) {
+			                    $trailing .= $vsacb_last;
+			                    $vsacb_word = substr($vsacb_word, 0, -1);
+			                    $vsacb_last = substr($vsacb_word, -1);
+			                }
+			                $vsacb_link = $vsacb_word;
+			                if (substr($vsacb_link, 0, 4) == 'www.') {
+			                    $vsacb_link = 'http://'.$vsacb_link;
+			                }
+			                $vsacb_word = '[url="'.$vsacb_link.'"]'.$vsacb_word.'[/url]'.$trailing;
+			            }
+			            $vsacb_words[$vsacb_i] = $vsacb_word;
+			        }
+			        $vsacb_lines[$x] = implode(' ', $vsacb_words);
+			    }
+			    return implode("\n", $vsacb_lines);
+			}
+
+			require_once(DIR . '/includes/class_bbcode.php');
+			$vsacb_bbparser = new vB_BbCodeParser($vbulletin, fetch_tag_list());
+
+			$vsacb_smilies_onoff = $vbulletin->options['vsachatbox_smilies_parse'];
+
+			$vsacb_candelall = false;
+			if (is_member_of($vbulletin->userinfo,6))
+			{
+				$vsacb_candelall = true;
+			}
+
+			if (($_REQUEST['do']=='cchatbox') OR ($_REQUEST['do']=='ccarc'))
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_xhours = TIMENOW - ($vbulletin->options['vsachatbox_stats_lastxhours'] * 60 * 60);
+				$vsacb_mymessage = 0;
+				$vsacb_xhoursmessage = 0;
+				$vsacb_get_stats = $vbulletin->db->query_read("SELECT id, userid, dateline FROM " . TABLE_PREFIX . "vsa_chatbox ");
+				while ($vsacb_stats = $vbulletin->db->fetch_array($vsacb_get_stats))
+				{
+					if ($vsacb_stats[userid] == $vbulletin->userinfo['userid'])
+					{
+						$vsacb_mymessage += 1;
+					}
+
+					if ($vsacb_stats[dateline] > $vsacb_xhours)
+					{
+						$vsacb_xhoursmessage += 1;
+					}
+				}
+				$vsacb_totalentries = $vbulletin->db->num_rows($vsacb_get_stats);
+				$vsacb_totalmessages = vb_number_format($vsacb_totalentries);
+				$vsacb_mymessages = vb_number_format($vsacb_mymessage);
+				$vsacb_xhoursmessages = vb_number_format($vsacb_xhoursmessage);
+				unset($vsacb_get_stats, $vsacb_stats);
+
+				$vsacb_get_topx = $vbulletin->db->query("
+					SELECT COUNT(id) AS vsacb_msgs, vsa_chatbox.userid, user.username, user.usergroupid
+					FROM " . TABLE_PREFIX . "vsa_chatbox AS vsa_chatbox
+					LEFT JOIN " . TABLE_PREFIX . "user AS user ON (vsa_chatbox.userid = user.userid)
+					WHERE vsa_chatbox.userid > 0
+					GROUP BY vsa_chatbox.userid
+					ORDER BY vsacb_msgs DESC
+					LIMIT 0, ".$vbulletin->options['vsachatbox_topx_results']."
+				");
+				$vsacb_topx_total = $vbulletin->db->num_rows($vsacb_get_topx);
+				if ($vsacb_topx_total < $vbulletin->options['vsachatbox_topx_results'])
+				{
+					$vsacb_topx_res = $vsacb_topx_total;
+				}
+				else
+				{
+					$vsacb_topx_res = $vbulletin->options['vsachatbox_topx_results'];
+				}
+				while ($vsacb_topposter = $vbulletin->db->fetch_array($vsacb_get_topx))
+				{
+					$vsacb_topposternr += 1;
+					$templater = vB_Template::create('vsa_chatbox_topchatters_bit');
+					$templater->register('vsacb_topposter', $vsacb_topposter);
+					$templater->register('vsacb_topposternr', $vsacb_topposternr);
+					$vsacb_topchatters .= $templater->render();
+				}
+				unset($vsacb_get_topx, $vsacb_topposter);
+
+				if ($vbulletin->options['vsachatbox_excluded_users']!='')
+				{
+					$vsacb_banlist_get = explode(',',$vbulletin->options['vsachatbox_excluded_users']);
+					foreach ($vsacb_banlist_get AS $vsacb_banlist_item)
+					{
+						$vsacb_banlist_userinfo = fetch_userinfo($vsacb_banlist_item);
+						if ($vsacb_canmod)
+						{
+							$vsacb_banlist_usercell[] = '<a style="white-space:nowrap;" href="javascript:VSacb_Confirm(\'unbanuser\',\''.$vsacb_banlist_item.'\',\''.$vsacb_banlist_userinfo['username'].'\');">'.$vsacb_banlist_userinfo['musername'].'</a>';
+						}
+						else
+						{
+							$vsacb_banlist_usercell[] = '<a style="white-space:nowrap;" href="member.php?'.$vbulletin->session->vars['sessionurl'].'u='.$vsacb_banlist_item.'">'.$vsacb_banlist_userinfo['musername'].'</a>';
+						}
+					}
+					sort($vsacb_banlist_usercell);
+					foreach ($vsacb_banlist_usercell AS $vsacb_banlist_user)
+					{
+						$vsacb_banlist .= $vsacb_banlist_user;
+					}
+					unset($vsacb_banlist_get, $vsacb_banlist_item, $vsacb_banlist_user);
+				}
+
+				$vbulletin->db->show_errors();
+
+				$templater = vB_Template::Create('vsa_chatbox_input');
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$templater->register('vsacb_smilies_init', $vsacb_smilies_init);
+				$templater->register('vsacb_colors', $vsacb_colors);
+				$templater->register('vsacb_smilie_first', $vsacb_smilie_first);
+				$templater->register('vsacb_textsize', $vsacb_textsize);
+				$templater->register('vsacb_colorfirst', $vsacb_colorfirst);
+				$vsachatbox_input = $templater->render();
+
+				$templater = vB_Template::Create('vsa_chatbox_status');
+				$templater->register('vsacb_sizes', $vsacb_sizes);
+				$vsachatbox_status = $templater->render();
+
+				$navbits = construct_navbits(array('' => $vbphrase['vsacb_chatbox_full']));
+				$navbar = render_navbar_template($navbits);
+				$templater = vB_Template::Create('vsa_chatbox');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('vsachatbox_input', $vsachatbox_input);
+				$templater->register('vsachatbox_status', $vsachatbox_status);
+				$templater->register('vsacb_mymessages', $vsacb_mymessages);
+				$templater->register('vsacb_totalmessages', $vsacb_totalmessages);
+				$templater->register('vsacb_xhoursmessages', $vsacb_xhoursmessages);
+				$templater->register('vsacb_topchatters', $vsacb_topchatters);
+				$templater->register('vsacb_topx_res', $vsacb_topx_res);
+				$templater->register('vsacb_banlist', $vsacb_banlist);
+				$templater->register('vsacb_totalentries', $vsacb_totalentries);
+				$templater->register('vsacb_canmod', $vsacb_canmod);
+				$templater->register('vsacb_locs', $vsacb_locs);
+				$templater->register('vsacb_newstat', $vsacb_newstat);
+				$templater->register('vsacb_textsize', $vsacb_textsize);
+				$templater->register('vsacb_colorfirst', $vsacb_colorfirst);
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$vsachatbox = $templater->render();
+			}
+
+			if ($_REQUEST['do']=='cchatbox')
+			{
+				$vbulletin->db->hide_errors();
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "session SET lastactivity = '".TIMENOW."', location = 'cchatbox' WHERE userid = " . $vbulletin->userinfo['userid']);
+				$vbulletin->db->show_errors();
+				print_output($vsachatbox);
+			}
+
+			if ($_REQUEST['ccbloc']!='')
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_locmessid = $vbulletin->input->clean_gpc('r', 'ccbloc', TYPE_UINT);
+
+				if ($vsacb_locmessid)
+				{
+					$vsacb_getlocpos = $vbulletin->db->query_read("
+						SELECT id
+						FROM " . TABLE_PREFIX . "vsa_chatbox
+						WHERE id >= '".$vsacb_locmessid."'
+					");
+					$vsacb_findlocpos = $vbulletin->db->num_rows($vsacb_getlocpos);
+					$vsacb_loctargetpage = ceil($vsacb_findlocpos / $vbulletin->options['vsachatbox_archive_perpage']);
+					$vsacb_locredirect = 'misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc&amp;page='.$vsacb_loctargetpage.'&amp;cm='.$vsacb_locmessid.'#'.$vsacb_locmessid;
+				}
+				else
+				{
+					$vsacb_locredirect = 'misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc&amp;ccbnomess=true';
+				}
+				$vbulletin->db->show_errors();
+				exec_header_redirect($vsacb_locredirect);
+			}
+
+			if ($_REQUEST['ccbfind']!='')
+			{
+				$vbulletin->db->hide_errors();
+				if ($_REQUEST['ccbfind']=='unread')
+				{
+					$vsacb_lastmess_unread = $vbulletin->db->query_first("
+						SELECT id
+						FROM " . TABLE_PREFIX . "vsa_chatbox
+						WHERE dateline > '".$vbulletin->userinfo['lastvisit']."'
+						ORDER BY dateline ASC
+					");
+					$vsacb_reqmid = $vsacb_lastmess_unread['id'];
+				}
+				else
+				{
+					$vsacb_lastmessuser = $vbulletin->input->clean_gpc('r', 'ccbfind', TYPE_UINT);
+					$vsacb_lastmess_user = $vbulletin->db->query_first("
+						SELECT MAX(id) AS id
+						FROM " . TABLE_PREFIX . "vsa_chatbox
+						WHERE userid = '".$vsacb_lastmessuser."'
+					");
+					$vsacb_reqmid = $vsacb_lastmess_user['id'];
+				}
+				if ($vsacb_reqmid)
+				{
+					$vsacb_getfindpos = $vbulletin->db->query_read("
+						SELECT id
+						FROM " . TABLE_PREFIX . "vsa_chatbox
+						WHERE id >= '".$vsacb_reqmid."'
+					");
+					$vsacb_findpos = $vbulletin->db->num_rows($vsacb_getfindpos);
+					$vsacb_targetpage = ceil($vsacb_findpos / $vbulletin->options['vsachatbox_archive_perpage']);
+					$vsacb_findredirect = 'misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc&amp;page='.$vsacb_targetpage.'&amp;cm='.$vsacb_reqmid.'#'.$vsacb_reqmid;
+				}
+				else
+				{
+					$vsacb_findredirect = 'misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc&amp;ccbnomess=true';
+				}
+				$vbulletin->db->show_errors();
+				exec_header_redirect($vsacb_findredirect);
+			}
+
+			if ($_REQUEST['do']=='ccarc')
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_globals = array(
+					'cbt' => TYPE_STR,
+					'cbu' => TYPE_UINT
+				);
+				$vbulletin->input->clean_array_gpc('r', $vsacb_globals);
+
+				$vsacb_search_value = $vbphrase['vsacb_search_chatbox'];
+
+				$vsacb_targettext = htmlspecialchars($vbulletin->GPC['cbt']);
+				if ($vsacb_targettext)
+				{
+					$vsacb_onlytext = "AND vsa_chatbox.message LIKE '%".$vbulletin->db->escape_string($vsacb_targettext)."%' ";
+					$vsacb_search_value = $vsacb_targettext;
+				}
+
+				$vsacb_targetuser = $vbulletin->GPC['cbu'];
+				if ($vsacb_targetuser)
+				{
+					$vsacb_onlyuser = "AND vsa_chatbox.userid = '".$vsacb_targetuser."' ";
+				}
+
+				$vsacb_get_msg_nav = $vbulletin->db->query_read("
+					SELECT vsa_chatbox.id, vsa_chatbox.message
+					FROM ".TABLE_PREFIX."vsa_chatbox AS vsa_chatbox
+					WHERE vsa_chatbox.message !='' $vsacb_onlytext $vsacb_onlyuser
+				");
+				$vsacb_totalnav = $vbulletin->db->num_rows($vsacb_get_msg_nav);
+
+				$navbits = array('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc' . $vbulletin->session->vars['sessionurl_q'] => $vbphrase['vsacb_chatbox']);
+				$perpage = $vbulletin->input->clean_gpc('r', 'perpage', TYPE_UINT);
+
+				$pagenumber = $vbulletin->input->clean_gpc('r', 'pagenumber', TYPE_UINT);
+				sanitize_pageresults($vsacb_totalnav, $pagenumber, $perpage, 40, $vbulletin->options['vsachatbox_archive_perpage']);
+				$limitlower = ($pagenumber - 1) * $perpage + 1;
+				if ($limitlower <= 0)
+				{
+					$limitlower = 1;
+				}
+
+				$vsacb_get_msg_arc = $vbulletin->db->query_read("
+					SELECT vsa_chatbox.id, vsa_chatbox.userid, vsa_chatbox.userip, vsa_chatbox.message, vsa_chatbox.dateline, vsa_chatbox.textprop, user.username, user.usergroupid, user.displaygroupid
+					FROM ".TABLE_PREFIX."vsa_chatbox AS vsa_chatbox
+					LEFT JOIN ".TABLE_PREFIX."user AS user ON (user.userid = vsa_chatbox.userid)
+					WHERE vsa_chatbox.message !='' $vsacb_onlytext $vsacb_onlyuser $vsacb_onlymessage
+					ORDER BY vsa_chatbox.dateline DESC
+					LIMIT " . ($limitlower - 1) . "," . $perpage . "
+				");
+				while ($vsacb_msg_arc = $vbulletin->db->fetch_array($vsacb_get_msg_arc))
+				{
+					$vsacb_msg_arc_nr += 1;
+					$vsacb_msg_arc_staff = false;
+					if (is_member_of($vsacb_msg_arc, explode(',', '5,6,7')))
+					{
+						$vsacb_msg_arc_staff = true;
+					}
+
+					$vsacb_msg_arc_id = $vsacb_msg_arc['id'];
+					$vsacb_msg_arc['message'] = htmlspecialchars_uni($vsacb_msg_arc['message']);
+					$vsacb_msg_arc['musername'] = fetch_musername($vsacb_msg_arc);
+
+					$vsacb_msg_arc_banned = false;
+					eval('$vsacb_bannedusers = in_array($vsacb_msg_arc[userid], array(' . $vbulletin->options['vsachatbox_excluded_users'] . '));');
+					if (in_array($vsacb_msg_arc[userid], array($vsacb_bannedusers)))
+					{
+						$vsacb_msg_arc_banned = true;
+					}
+
+					$vsacb_msg_arc['time'] = VSacb_buildTime($vsacb_msg_arc['dateline']);
+					if ($vsacb_msg_arc['dateline']>$vbulletin->userinfo['lastvisit'])
+					{
+						$vsacb_msg_arc_icon = '<img class="inlineimg" src="'.vB_Template_Runtime::fetchStyleVar('imgdir_statusicon').'/post_new.gif" alt="'.$vbphrase['new'].'" border="0" /> ';
+					}
+					else
+					{
+						$vsacb_msg_arc_icon = '<img class="inlineimg" src="'.vB_Template_Runtime::fetchStyleVar('imgdir_statusicon').'/post_old.gif" alt="'.$vbphrase['new'].'" border="0" /> ';
+					}
+					$vsacb_arc_coloropen = '';
+					$vsacb_arc_colorclose = '';
+					$vsacb_arc_boldopen = '';
+					$vsacb_arc_boldclose = '';
+					$vsacb_arc_italicopen = '';
+					$vsacb_arc_italicclose = '';
+					$vsacb_arc_underlineopen = '';
+					$vsacb_arc_underlineclose = '';
+					$vsacb_msg_arc['textprop'] = unserialize($vsacb_msg_arc['textprop']);
+					if ($vsacb_msg_arc['textprop']['color'] AND $vbulletin->options['vsachatbox_colors_enabled'])
+					{
+						$vsacb_arc_coloropen = '[color='.$vsacb_msg_arc['textprop']['color'].']';
+						$vsacb_arc_colorclose = '[/color]';
+					}
+					if ($vsacb_msg_arc['textprop']['bold'])
+					{
+						$vsacb_arc_boldopen = '[b]';
+						$vsacb_arc_boldclose = '[/b]';
+					}
+					if ($vsacb_msg_arc['textprop']['italic'])
+					{
+						$vsacb_arc_italicopen = '[i]';
+						$vsacb_arc_italicclose = '[/i]';
+					}
+					if ($vsacb_msg_arc['textprop']['underline'])
+					{
+						$vsacb_arc_underlineopen = '[u]';
+						$vsacb_arc_underlineclose = '[/u]';
+					}
+
+					if ($vbulletin->options['vsachatbox_clickable_links'])
+					{
+						$vsacb_msg_arc_tow = VSacb_clickableLinks($vsacb_msg_arc['message']);
+					}
+					else
+					{
+						$vsacb_msg_arc_tow = $vsacb_msg_arc['message'];
+					}
+
+					$vsacb_msg_arc_styled = $vsacb_arc_coloropen.$vsacb_arc_boldopen.$vsacb_arc_italicopen.$vsacb_arc_underlineopen.$vsacb_msg_arc_tow.$vsacb_arc_underlineclose.$vsacb_arc_italicclose.$vsacb_arc_boldclose.$vsacb_arc_colorclose;
+
+					$vsacb_msg_arc_parsed = str_replace('\'', '&#39;', $vsacb_bbparser->do_parse($vsacb_msg_arc_styled,1,$vsacb_smilies_onoff,1,1,1));
+
+					$templater = vB_Template::create('vsa_chatbox_archive_bit');
+					$templater->register('vsacb_msg_arc_nr', $vsacb_msg_arc_nr);
+					$templater->register('vsacb_msg_arc_id', $vsacb_msg_arc_id);
+					$templater->register('vsacb_msg_arc', $vsacb_msg_arc);
+					$templater->register('vsacb_msg_arc_icon', $vsacb_msg_arc_icon);
+					$templater->register('vsacb_msg_arc_parsed', $vsacb_msg_arc_parsed);
+					$templater->register('vsacb_msg_arc_staff', $vsacb_msg_arc_staff);
+					$templater->register('vsacb_msg_arc_banned', $vsacb_msg_arc_banned);
+					$templater->register('vsacb_canmod', $vsacb_canmod);
+					$templater->register('vsacb_canedit', $vsacb_canedit);
+					$templater->register('vsacb_totalentries', $vsacb_totalentries);
+					$templater->register('vsacb_targettext', $vsacb_targettext);
+
+					if ($vbulletin->options['vsachatbox_reverse_messages_arc'])
+					{
+						$vsacb_msgs_arc[] .= $templater->render();
+					}
+					else
+					{
+						$vsacb_msgs_arc .= $templater->render();
+					}
+				}
+
+				if ($vbulletin->options['vsachatbox_reverse_messages_arc'])
+				{
+					if (!empty($vsacb_msgs_arc))
+					{
+						$vsacb_msgs_arc_rev = array_reverse($vsacb_msgs_arc);
+						foreach ($vsacb_msgs_arc_rev as $vsacb_msg_arc_rev)
+						{
+							$vsacb_msgs_arc_final .= $vsacb_msg_arc_rev;
+						}
+					}
+					else
+					{
+						$vsacb_msgs_arc_final = '';
+					}
+				}
+				else
+				{
+					$vsacb_msgs_arc_final = $vsacb_msgs_arc;
+				}
+
+				unset($vsacb_get_msg_arc, $vsacb_msg_arc);
+
+				$pagenav = construct_page_nav($pagenumber, $perpage, $vsacb_totalnav, 'misc.php?' . $vbulletin->session->vars['sessionurl'] . 'do=ccarc'
+					. (!empty($vbulletin->GPC['perpage']) ? "&amp;pp=$perpage" : "")
+					. (!empty($vsacb_targetuser) ? "&amp;cbu=$vsacb_targetuser" : "")
+					. (!empty($vsacb_targettext) ? "&amp;cbt=$vsacb_targettext" : "")
+				);
+
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "session SET lastactivity = '".TIMENOW."', location = 'ccarc' WHERE userid = " . $vbulletin->userinfo['userid']);
+				$vbulletin->db->show_errors();
+
+				$navbits = construct_navbits(array('' => $vbphrase['vsacb_archive']));
+				$navbar = render_navbar_template($navbits);
+				$templater = vB_Template::Create('vsa_chatbox');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('vsacb_totalmessages', $vsacb_totalmessages);
+				$templater->register('vsacb_totalentries', $vsacb_totalentries);
+				$templater->register('vsacb_xhoursmessages', $vsacb_xhoursmessages);
+				$templater->register('vsacb_mymessages', $vsacb_mymessages);
+				$templater->register('vsacb_topx_res', $vsacb_topx_res);
+				$templater->register('vsacb_topchatters', $vsacb_topchatters);
+				$templater->register('vsacb_candelall', $vsacb_candelall);
+				$templater->register('vsacb_banlist', $vsacb_banlist);
+				$templater->register('vsacb_targettext', $vsacb_targettext);
+				$templater->register('vsacb_targetuser', $vsacb_targetuser);
+				$templater->register('vsacb_msgs_arc_final', $vsacb_msgs_arc_final);
+				$templater->register('vsacb_canmod', $vsacb_canmod);
+				$templater->register('vsacb_canedit', $vsacb_canedit);
+				$templater->register('pagenav', $pagenav);
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				$templater->register('vsacb_search_value', $vsacb_search_value);
+				$templater->register('vsacb_locs', $vsacb_locs);
+				$vsachatbox = $templater->render();
+				print_output($vsachatbox);
+			}
+
+			if (($_REQUEST['show']=='ccbusers') AND (THIS_SCRIPT=='misc'))
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_viewers_timecut = TIMENOW - ($vbulletin->options['vsachatbox_viewers_timecut'] * 60);
+				$vsacb_viewers_reg = 0;
+				$vsacb_viewers_unreg = 0;
+
+				$vsacb_getviewers = $vbulletin->db->query_read("
+					SELECT session.lastactivity, session.userid, session.location, session.host, user.username, user.usergroupid, user.displaygroupid, IF(user.options & " . $vbulletin->bf_misc_useroptions['invisible'] . ", 1, 0) AS invisible
+					FROM " . TABLE_PREFIX . "session AS session
+					LEFT JOIN " . TABLE_PREFIX . "user AS user ON(user.userid = session.userid)
+					WHERE session.lastactivity > $vsacb_viewers_timecut AND session.location LIKE '%cchatbox%' OR session.location LIKE '%ccarc%'
+					GROUP BY session.userid
+					ORDER BY user.username ASC
+				");
+				$vbulletin->db->show_errors();
+				while ($vsacb_viewer = $vbulletin->db->fetch_array($vsacb_getviewers))
+				{
+					$vsacb_markinv = '';
+					$vsacb_viewer_visible = true;
+					if ($vsacb_viewer[invisible])
+					{
+						$vsacb_viewer_visible = false;
+						if (($vbulletin->userinfo['permissions']['genericpermissions'] & $vbulletin->bf_ugp_genericpermissions['canseehidden']) OR $vsacb_viewer['userid'] == $vbulletin->userinfo['userid'])
+						{
+							$vsacb_markinv = '*';
+							$vsacb_viewer_visible = true;
+						}
+					}
+					if ($vsacb_viewer[userid]!=0)
+					{
+						$vsacb_viewers_reg += 1;
+						$vsacb_viewer_username = fetch_musername($vsacb_viewer);
+						$vsacb_viewer_lastact = vbdate('d-m, H:i', $vsacb_viewer[lastactivity]);
+						if ($vsacb_viewer_visible)
+						{
+							$vsacb_viewer_item .= ', <a href="member.php?'.$vbulletin->session->vars['sessionurl'].'u='.$vsacb_viewer[userid].'" title="'.$vsacb_viewer_lastact.'">'.$vsacb_viewer_username.'</a>'.$vsacb_markinv;
+						}
+						else
+						{
+							$vsacb_viewer_item .= ', '.$vbphrase['vsacb_invisible'];
+						}
+					}
+					else
+					{
+						$vsacb_viewers_unreg += 1;
+					}
+				}
+				$vsacb_viewers_total = $vsacb_viewers_reg + $vsacb_viewers_unreg;
+				$vsacb_viewers_list = substr($vsacb_viewer_item, 2);
+				unset($vsacb_getviewers, $vsacb_viewer);
+				echo ('<tr>
+						<td colspan="5">
+							'.construct_phrase($vbphrase['vsacb_active_users_x'], $vbulletin->options['vsachatbox_viewers_timecut'], $vsacb_viewers_total, $vsacb_viewers_reg, $vsacb_viewers_unreg).'
+						</td>
+					</tr>' . iif($vsacb_viewers_list,'<tr><td colspan="5">'.$vsacb_viewers_list.'</td></tr>',''));
+				exit;
+			}
+
+			if ($_REQUEST['show']=='ccbmessages')
+			{
+				$stylevar[codeblockwidth] = $vbulletin->options['vsachatbox_code_maxwidth'].'px';
+				$vbulletin->db->hide_errors();
+				$vsacb_get_msg_box = $vbulletin->db->query_read("
+					SELECT vsa_chatbox.id, vsa_chatbox.userid, vsa_chatbox.message, vsa_chatbox.dateline, vsa_chatbox.textprop, user.username, user.usergroupid, user.displaygroupid
+					FROM ".TABLE_PREFIX."vsa_chatbox AS vsa_chatbox
+					LEFT JOIN ".TABLE_PREFIX."user AS user ON (user.userid = vsa_chatbox.userid)
+					ORDER BY vsa_chatbox.dateline DESC
+					LIMIT 0, " . $vbulletin->options['vsachatbox_messages_main'] . "
+				");
+				$vbulletin->db->show_errors();
+				$vsacb_box_totalmessages = $vbulletin->db->num_rows($vsacb_get_msg_box);
+				while ($vsacb_msg_box = $vbulletin->db->fetch_array($vsacb_get_msg_box))
+				{
+					$vsacb_msg_box_id = $vsacb_msg_box['id'];
+					$vsacb_msg_box['message'] = htmlspecialchars_uni($vsacb_msg_box['message']);
+					if ($vbulletin->options['vsachatbox_clickable_links'])
+					{
+						$vsacb_msg_box['message'] = VSacb_clickableLinks($vsacb_msg_box['message']);
+					}
+					$vsacb_msg_box['musername'] = fetch_musername($vsacb_msg_box);
+
+					$vsacb_msg_box_banned = false;
+					eval('$vsacb_bannedusers = in_array($vsacb_msg_box[userid], array(' . $vbulletin->options['vsachatbox_excluded_users'] . '));');
+					if (in_array($vsacb_msg_box[userid], array($vsacb_bannedusers)))
+					{
+						$vsacb_msg_box_banned = true;
+					}
+
+					$vsacb_msg_box['time'] = VSacb_buildTime($vsacb_msg_box['dateline']);
+					if ($vsacb_msg_box['dateline']>$vbulletin->userinfo['lastvisit'])
+					{
+						$vsacb_msg_box_icon = '<img class="inlineimg" src="'.vB_Template_Runtime::fetchStyleVar('imgdir_statusicon').'/post_new.gif" alt="'.$vbphrase['new'].'" border="0" /> ';
+					}
+					else
+					{
+						$vsacb_msg_box_icon = '<img class="inlineimg" src="'.vB_Template_Runtime::fetchStyleVar('imgdir_statusicon').'/post_old.gif" alt="'.$vbphrase['new'].'" border="0" /> ';
+					}
+					$vsacb_box_coloropen = '';
+					$vsacb_box_colorclose = '';
+					$vsacb_box_boldopen = '';
+					$vsacb_box_boldclose = '';
+					$vsacb_box_italicopen = '';
+					$vsacb_box_italicclose = '';
+					$vsacb_box_underlineopen = '';
+					$vsacb_box_underlineclose = '';
+					$vsacb_msg_box['textprop'] = unserialize($vsacb_msg_box['textprop']);
+					if ($vsacb_msg_box['textprop']['color'] AND $vbulletin->options['vsachatbox_colors_enabled'])
+					{
+						$vsacb_box_coloropen = '[color='.$vsacb_msg_box['textprop']['color'].']';
+						$vsacb_box_colorclose = '[/color]';
+					}
+					if ($vsacb_msg_box['textprop']['bold'])
+					{
+						$vsacb_box_boldopen = '[b]';
+						$vsacb_box_boldclose = '[/b]';
+					}
+					if ($vsacb_msg_box['textprop']['italic'])
+					{
+						$vsacb_box_italicopen = '[i]';
+						$vsacb_box_italicclose = '[/i]';
+					}
+					if ($vsacb_msg_box['textprop']['underline'])
+					{
+						$vsacb_box_underlineopen = '[u]';
+						$vsacb_box_underlineclose = '[/u]';
+					}
+					$vsacb_msg_box_styled = $vsacb_box_coloropen.$vsacb_box_boldopen.$vsacb_box_italicopen.$vsacb_box_underlineopen.$vsacb_msg_box['message'].$vsacb_box_underlineclose.$vsacb_box_italicclose.$vsacb_box_boldclose.$vsacb_box_colorclose;
+					if ($vsacb_msg_box[userid] == 999) {
+					$vsacb_msg_box_parsed = str_replace('\'', '&#39;', $vsacb_bbparser->do_parse($vsacb_msg_box_styled,1,0,1,1,1));
+					}
+					else {
+					$vsacb_msg_box_parsed = str_replace('\'', '&#39;', $vsacb_bbparser->do_parse($vsacb_msg_box_styled,1,$vsacb_smilies_onoff,1,1,1));
+					}
+					if ($vsacb_msg_box[userid] == 999) {
+					$vsacb_msg_box_parsed = '<div class="thuongtin">   ' . $vsacb_msg_box_parsed . '    </div>';
+					}
+					$templater = vB_Template::create('vsa_chatbox_bit');
+					$templater->register('vsacb_msg_box_parsed', $vsacb_msg_box_parsed);
+					$templater->register('vsacb_msg_box_id', $vsacb_msg_box_id);
+					$templater->register('vsacb_msg_box', $vsacb_msg_box);
+					$templater->register('vsacb_msg_box_icon', $vsacb_msg_box_icon);
+
+					if ($vbulletin->options['vsachatbox_reverse_messages'])
+					{
+						$vsacb_msgs_box[] .= $templater->render();
+					}
+					else
+					{
+						$vsacb_msgs_box .= $templater->render();
+					}
+				}
+				if ($vbulletin->options['vsachatbox_reverse_messages'])
+				{
+					if (!empty($vsacb_msgs_box))
+					{
+						$vsacb_msgs_box_rev = array_reverse($vsacb_msgs_box);
+						foreach ($vsacb_msgs_box_rev as $vsacb_msg_box_rev)
+						{
+							$vsacb_msgs_box_final .= $vsacb_msg_box_rev;
+						}
+					}
+					else
+					{
+						$vsacb_msgs_box_final = '';
+					}
+				}
+				else
+				{
+					$vsacb_msgs_box_final = $vsacb_msgs_box;
+				}
+				unset($vsacb_get_msg_box, $vsacb_msg_box);
+				if ($vsacb_box_totalmessages>0)
+				{
+					echo ($vsacb_msgs_box_final);
+				}
+				else
+				{
+					echo ('<tr><td>'.$vbphrase['vsacb_no_messages'].'</td></tr>');
+				}
+				exit;
+			}
+
+			if ($_REQUEST['show']=='ccbsmilies')
+			{
+				if ($vbulletin->options['vsachatbox_smiliestotal']>1)
+				{
+					$vsacb_fsmilies_limit = "LIMIT 0, ".$vbulletin->options['vsachatbox_smiliestotal']."";
+				}
+				$vbulletin->db->hide_errors();
+				$vsacb_get_fsmilies = $vbulletin->db->query_read_slave("
+					SELECT smilieid, smilietext, smiliepath, smilie.title, imagecategory.title AS category
+					FROM " . TABLE_PREFIX . "smilie AS smilie
+					LEFT JOIN " . TABLE_PREFIX . "imagecategory AS imagecategory USING(imagecategoryid)
+					ORDER BY imagecategory.displayorder, imagecategory.title, smilie.displayorder
+					$vsacb_fsmilies_limit
+				");
+				$vsacb_fsmilies_total = $vbulletin->db->num_rows($vsacb_get_fsmilies);
+				$vbulletin->db->data_seek($vsacb_get_fsmilies, 0);
+				$vsacb_i = 0;
+				$vsacb_fsmilie_bit = array();
+				while ($vsacb_fsmilie = $vbulletin->db->fetch_array($vsacb_get_fsmilies) AND ($vsacb_i++ < $vsacb_fsmilies_total))
+				{
+					$vsacb_fsmilie_id += 1;
+
+					$vsacb_fsmilie_html = '<a style="display:block;margin:2px;overflow:hidden;width:'.$vbulletin->options['vsachatbox_smiliesclip'].'px;height:'.$vbulletin->options['vsachatbox_smiliesclip'].'px;" href="javascript:void(0);" onclick="return VSacb_insertSmilie(\''.str_replace("'", "\'", $vsacb_fsmilie['smilietext']).'\')"><img onmouseover="return VSacb_updateSmiliePreview(this.src);" src="'.$vsacb_fsmilie['smiliepath'].'" alt="'.$vsacb_fsmilie['title'].'" border="0" /></a>';
+					$vsacb_fsmilie_bit[] = '<td>'.$vsacb_fsmilie_html.'</td>';
+					if (sizeof($vsacb_fsmilie_bit) == $vbulletin->options['vsachatbox_smiliesperrow'])
+					{
+						$vsacb_fsmilie_cell = implode('', $vsacb_fsmilie_bit);
+						$vsacb_fsmilie_bits .= '<tr align="center">'.$vsacb_fsmilie_cell.'</tr>';
+						$vsacb_fsmilie_bit = array();
+					}
+				}
+				$vsacb_fsmilies_remaining = sizeof($vsacb_fsmilie_bit);
+				if ($vsacb_fsmilies_remaining > 0)
+				{
+					$vsacb_fsmilies_colrem = $vbulletin->options['vsachatbox_smiliesperrow'] - $vsacb_fsmilies_remaining;
+					$vsacb_fsmilie_bit[] = '<td colspan="'.$vsacb_fsmilies_colrem.'">&nbsp;</td>';
+					$vsacb_fsmilie_cell = implode('', $vsacb_fsmilie_bit);
+					$vsacb_fsmilie_bits .= '<tr align="center" valign="bottom">'.$vsacb_fsmilie_cell.'</tr>';
+				}
+				$vbulletin->db->show_errors();
+				$vsacb_fsmilies = '<table cellpadding="0" cellspacing="0" border="0" align="center">'.$vsacb_fsmilie_bits.'</table>';
+				unset($vsacb_get_fsmilies, $vsacb_fsmilie);
+				echo ($vsacb_fsmilies);
+				exit;
+			}
+
+			if ($_POST['do'] == 'cb_postnew')
+			{
+				session_start();
+				if (!$_SESSION['t2_cb_spam']) $_SESSION['t2_cb_spam'] = 0;
+				$vbulletin->input->clean_array_gpc('p', array(
+					'vsacb_newmessage'	 => TYPE_STR,
+					'color' => TYPE_NOHTML,
+					'fontWeight' => TYPE_NOHTML,
+					'fontStyle' => TYPE_NOHTML,
+					'textDecoration' => TYPE_NOHTML)
+				);
+
+				if (!empty($vbulletin->GPC['vsacb_newmessage']) && $vbulletin->userinfo['userid'] > 0 && !VSacb_userExcluded($vbulletin->userinfo) AND empty($vbulletin->userinfo['infractiongroupids']))
+				{
+					$vsacb_messageinfo = addslashes(serialize(array(
+						'color' => addslashes(convert_urlencoded_unicode($vbulletin->GPC['color'])),
+						'bold' => addslashes(convert_urlencoded_unicode($vbulletin->GPC['fontWeight'])),
+						'italic' => addslashes(convert_urlencoded_unicode($vbulletin->GPC['fontStyle'])),
+						'underline' => addslashes(convert_urlencoded_unicode($vbulletin->GPC['textDecoration']))
+					)));
+
+					$vbulletin->GPC['vsacb_newmessage'] = convert_urlencoded_unicode($vbulletin->GPC['vsacb_newmessage']);
+
+					$vsacb_checkme = strpos($vbulletin->GPC['vsacb_newmessage'], '/me ');
+					if ($vsacb_checkme !== false)
+					{
+						$vbulletin->GPC['vsacb_newmessage'] = str_replace('/me ', $vbulletin->userinfo['username'].' ', $vbulletin->GPC['vsacb_newmessage']);
+						$vbulletin->GPC['vsacb_newmessage'] = '[color='.$vbulletin->options['vsachatbox_mecolor'].']* '.$vbulletin->GPC['vsacb_newmessage'].'[/color]';
+					}
+					$t2_bot_answer = Array("C&#7893; nhân có câu: NHÂN VÔ TH&#7852;P TOÀN, &#273;âu có ai là hoàn thi&#7879;n &#273;âu anh {$vbulletin->userinfo['username']}.||G&#7913;m! Khôn &#273;&#432;&#7907;c bao nhiêu mà b&#7843;o ng&#432;&#7901;i khác ngu. Bác {$vbulletin->userinfo['username']} c&#7913; tinh t&#432;&#7899;ng.||Ghét cái thái &#273;&#7897;!||Ngu cái bao cao su &#7845;y.||&#272;&#7891; con n&#7907;n  :@). H&#7889; xí th&#7859;ng ti&#7871;n.||Con trai ch&#7917;i con gái là hèn. Lêu lêu! &#272;&#7891; hèn!"=>"@pé ngu|bé ngu|bot ngu@i",
+					"Anh nào &#273;óng góp nhi&#7873;u cho AZS là pé th&#432;&#417;ng ng&#432;&#7901;i &#273;ó.||Yêu dân t&#7897;c Vi&#7879;t Nam máu &#273;&#7887; da vàng, yêu cha yêu m&#7865;, yêu b&#7841;n, yêu th&#7847;y.||Pé ch&#7917;a bi&#7871;t yêu.||Yêu chi anh. Yêu nhi&#7873;u kh&#7893; nhi&#7873;u, con trai bây gi&#7901; 100 &#273;&#7913;a nh&#432; 1. Tay ôm con này, m&#7855;c li&#7871;c con kia, môi hôn con n&#7885;, lòng ngh&#297; v&#7873; con Th&#7911;y Top.||Pé ch&#432;a iu ai, nh&#432;ng n&#7871;u anh {$vbulletin->userinfo['username']} chuy&#7875;n cho pé ít thanks thì pé s&#7869; vui lém."=>"@pé yêu ai|bé yêu ai|pé iu ai|pé iu ai@i",
+					"Pé &#273;&#7865;p pé có quy&#7873;n.||Pé có làm gì &#273;âu mà nói pé ch&#7843;nh. &#7912; ch&#417;i v&#7899;i anh {$vbulletin->userinfo['username']} n&#7919;a."=>"@pé ch&#7843;nh|bé ch&#7843;nh@i",
+					"Pé chào anh {$vbulletin->userinfo['username']},chúc anh 1 ngày t&#7889;t lành.||Chào hoài! Làm chào l&#7841;i mu&#7889;n m&#7879;t.||Quen bi&#7871;t gì mà chào :| Ph&#7855;n &#273;ê!"=>"@chào pé|chào bé|hello pe|hello pé|hello bé|hello pe@i",
+					"Ôi g&#7913;m quá!||Anh {$vbulletin->userinfo['username']} b&#7845;t l&#7883;ch s&#7921; ghê.||Th&#7853;t là thô b&#7881; h&#7885;c.||Anh {$vbulletin->userinfo['username']} &#273;&#7915;ng post m&#7845;y cái smile ki&#7875;u &#273;ó n&#7919;a,Trông g&#7913;m quá &#273;i.||Á á á á á á á..................................."=>"@:nac2:|:culec:|:ditdaychuyen:|:chimto:|:muoi:|:daibay:|:lol2:|:fuck:|:choidog:|:soclo:|:nac:|:thoiken:@i",
+"Bin b&#7885;t hoài! M&#7845;y ng&#432;&#7901;i ngh&#297; tui là cái máy ch&#7855;c.||&#272;&#7907;i pé chút &#273;&#7875; pé search, n&#7871;u 3 ngày sau ko th&#7845;y k&#7871;t qu&#7843; thì pé ch&#432;a tìm ra bin nhé.||L&#7841;i check bin, vào nhanuoc.vn/checkbin/ &#273;&#7875; check t&#7841;m &#273;i anh, pé ch&#432;a &#273;&#432;&#7907;c c&#7853;p nh&#7853;t d&#7919; li&#7879;u t&#7899;i"=>"@!bin@i",
+"Còn lâu!||Sao z&#7883;, ngh&#297; sao z&#7883;, pé &#273;&#7865;p th&#7871; lày mà l&#7841;i &#273;i iu 1 ng&#432;&#7901;i v&#7915;a x&#7845;&#7845;&#7845;&#7845;&#7845;uuuuuu v&#7915;a khùng nh&#432; anh sao.||Má pé nói: Sao này con bi&#7871;t iu thì iu cái th&#7857;ng lào có ch&#7895; &#273;&#7913;ng và c&#7913;ng ch&#7895; &#273;ó. C&#7905; con tép nh&#432; anh thì x&#7871;p hàng ch&#7901; lau giày cho pé &#273;i.||Pé l&#7905; ........... mang trong ng&#432;&#7901;i .......... gi&#7885;t máu c&#7911;a anh Ho&#7841;n r&#7891;i...((||Yêu cái tô bún riêu, có ti&#7873;n cho ch&#7883; xài không mà &#273;òi yêu h&#7843; c&#432;ng."=>"@yêu anh nha|iu anh nha|yêu anh &#273;i|iu anh &#273;i|pé yêu anh nhé|bé yêu anh nhé@i");
+					
+
+					if ($vbulletin->options['vsachatbox_banned_tags']!='')
+					{
+						$vsachatbox_banned_tags = str_replace(" ","",$vbulletin->options['vsachatbox_banned_tags']);
+						$vsacb_banned_tags = explode(',',$vsachatbox_banned_tags);
+						foreach ($vsacb_banned_tags AS $vsacb_banned_tag)
+						{
+							$vsacb_bannedtags .= ',['.$vsacb_banned_tag.']';
+							$vsacb_bannedtags .= ',[/'.$vsacb_banned_tag.']';
+						}
+						$vsacb_bannedtagsu = strtoupper($vsacb_bannedtags);
+						$vsacb_bannedtagspf = substr($vsacb_bannedtags.$vsacb_bannedtagsu, 1);
+						$vsacb_bannedtagsf = explode(',',$vsacb_bannedtagspf);
+						$vbulletin->GPC['vsacb_newmessage'] = str_replace($vsacb_bannedtagsf, '', $vbulletin->GPC['vsacb_newmessage']);
+					}
+
+					$vbulletin->db->hide_errors();
+					if ($vbulletin->userinfo['userid'] == 999) $vsacb_messageinfo = "";
+					$vbulletin->db->query_write("
+						INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+							(userid, userip, message, dateline, textprop)
+						VALUES ('".$vbulletin->userinfo['userid']."', '".$_SERVER['REMOTE_ADDR']."', '".addslashes($vbulletin->GPC['vsacb_newmessage'])."', ".TIMENOW.", '".$vsacb_messageinfo."')
+					");
+					// Check spam
+					if (preg_replace('@(\[.*?\])@', "", str_replace(" ", "", addslashes($vbulletin->GPC['vsacb_newmessage']))) == $_SESSION['t2_cb_old_mess']) {
+						$_SESSION['t2_cb_spam']++;
+					}
+					else {
+						$_SESSION['t2_cb_spam']=0;
+					}
+					if ($_SESSION['t2_cb_spam'] == 2)
+					{
+						$timenow = TIMENOW+1;
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', 'Yêu c&#7847;u {$vbulletin->userinfo['username']} không &#273;&#432;&#7907;c spam.', ".$timenow.", '')
+						");
+					}
+					elseif ($_SESSION['t2_cb_spam'] == 3) {
+					$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "user SET usergroupid=8,usertitle='Banned' WHERE userid='{$vbulletin->userinfo['userid']}'");
+					$t2_liftban = TIMENOW + 86400;
+					$t2_nowtime = TIMENOW;
+					
+					$vbulletin->db->query_write("DELETE FROM " . TABLE_PREFIX . "userban WHERE userid={$vbulletin->userinfo['userid']}");
+					
+					$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."userban
+								(userid, usergroupid, displaygroupid, usertitle, customtitle,adminid,bandate,liftdate,reason)
+							VALUES ({$vbulletin->userinfo['userid']}, 2, 0, 'AZS GROUP', 0, 999, {$t2_nowtime}, {$t2_liftban}, 'Spam Chatbox')
+						");
+					
+						$timenow = TIMENOW+1;
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', 'B&#7843;o r&#7891;i mà ko nghe nè.', ".$timenow.", '')
+						");
+					}
+					$_SESSION['t2_cb_old_mess'] = str_replace(" ", "", addslashes($vbulletin->GPC['vsacb_newmessage']));
+					$_SESSION['t2_cb_old_mess'] = preg_replace('@(\[.*?\])@', "", $_SESSION['t2_cb_old_mess']);
+					
+					//T2 BOT
+					
+					$timenow = TIMENOW+1;
+					foreach ($t2_bot_answer as $t2bot1=>$t2bot2) {
+						if (preg_match($t2bot2, addslashes($vbulletin->GPC['vsacb_newmessage']))) {
+							$answer_arr = explode("||", $t2bot1);
+							shuffle($answer_arr);
+							$bot_answer = $answer_arr[0];
+							$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', '".addslashes($bot_answer)."', ".$timenow.", '')
+						");
+						break;
+						}
+					}
+					//Ban user
+					$sm_ban = '@!ban (\d+) (\d+)@i';
+					if (($vbulletin->userinfo['userid'] == 1 || $vbulletin->userinfo['userid'] == 686) && preg_match($sm_ban, addslashes($vbulletin->GPC['vsacb_newmessage']), $t2_m)) {
+						$t2_liftban = TIMENOW + (86400 * $t2_m[2]);
+						$t2_nowtime = TIMENOW;
+						$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "user SET usergroupid=8,usertitle='Banned' WHERE userid='{$t2_m[1]}'");
+						$vbulletin->db->query_write("DELETE FROM " . TABLE_PREFIX . "userban WHERE userid={$t2_m[1]}");
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."userban
+								(userid, usergroupid, displaygroupid, usertitle, customtitle,adminid,bandate,liftdate,reason)
+							VALUES ({$t2_m[1]}, 2, 0, 'AZS GROUP', 0, 999, {$t2_nowtime}, {$t2_liftban}, 'X')
+						");
+						
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', '{$vbulletin->userinfo['username']} &#273;&#7865;p trai &#273;ã cho thành viên có id {$t2_m[1]} ra &#273;&#7843;o.', ".$timenow.", '')
+						");
+					}	
+					
+					
+
+					$sm_unban = '@!unban (\d+)@i';
+					if (($vbulletin->userinfo['userid'] == 1 || $vbulletin->userinfo['userid'] == 686) && preg_match($sm_unban, addslashes($vbulletin->GPC['vsacb_newmessage']), $t2_m)) {
+						$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "user SET usergroupid=2,usertitle='AZS GROUP' WHERE userid='{$t2_m[1]}'");
+						$vbulletin->db->query_write("DELETE FROM " . TABLE_PREFIX . "userban WHERE userid={$t2_m[1]}");
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', '{$vbulletin->userinfo['username']} &#273;&#7865;p trai &#273;ã unban cho thành viên có id {$t2_m[1]}.', ".$timenow.", '')
+						");
+					}	
+					
+					$sm_prune = '@!prune@i';
+					if (($vbulletin->userinfo['userid'] == 1 || $vbulletin->userinfo['userid'] == 686) && preg_match($sm_prune, addslashes($vbulletin->GPC['vsacb_newmessage']), $t2_m)) {
+						$vbulletin->db->query_write("DELETE FROM " . TABLE_PREFIX . "vsa_chatbox");
+						$vbulletin->db->query_write("
+							INSERT INTO ".TABLE_PREFIX."vsa_chatbox
+								(userid, userip, message, dateline, textprop)
+							VALUES ('999', '127.0.0.1', 'Tem Tem Tem', ".$timenow.", '')
+						");
+					}
+
+					$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "session SET lastactivity = '".TIMENOW."', location = 'cchatbox' WHERE userid = " . $vbulletin->userinfo['userid']);
+					$vbulletin->db->show_errors();
+				}
+				exit;
+			}
+
+			if (($_POST['do'] == 'vsacb_editmessage') AND $vsacb_canedit)
+			{
+				$vbulletin->input->clean_array_gpc('p', array(
+					'id' => TYPE_UINT,
+					'vsacb_editmessage' => TYPE_STR)
+				);
+
+				$vbulletin->db->hide_errors();
+				$vsacb_getmessageinfo = $vbulletin->db->query_first("SELECT id, userid from " . TABLE_PREFIX . "vsa_chatbox WHERE id = '".$vbulletin->GPC['id']."' ");
+
+				if ($vsacb_getmessageinfo['userid'] != $vbulletin->userinfo['userid'] && !$vsacb_canmod)
+				{
+					echo $vbulletin->GPC['vsacb_editmessage'];
+					exit;
+				}
+
+				$vbulletin->GPC['vsacb_editmessage'] = convert_urlencoded_unicode($vbulletin->GPC['vsacb_editmessage']);
+				
+				if ($vbulletin->options['vsachatbox_banned_tags']!='')
+				{
+					$vsachatbox_banned_tags = str_replace(" ","",$vbulletin->options['vsachatbox_banned_tags']);
+					$vsacb_banned_tags = explode(',',$vsachatbox_banned_tags);
+					foreach ($vsacb_banned_tags AS $vsacb_banned_tag)
+					{
+						$vsacb_bannedtags .= ',['.$vsacb_banned_tag.']';
+						$vsacb_bannedtags .= ',[/'.$vsacb_banned_tag.']';
+					}
+					$vsacb_bannedtagsu = strtoupper($vsacb_bannedtags);
+					$vsacb_bannedtagspf = substr($vsacb_bannedtags.$vsacb_bannedtagsu, 1);
+					$vsacb_bannedtagsf = explode(',',$vsacb_bannedtagspf);
+					$vbulletin->GPC['vsacb_editmessage'] = str_replace($vsacb_bannedtagsf, '', $vbulletin->GPC['vsacb_editmessage']);
+				}
+
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "vsa_chatbox SET message = '".addslashes($vbulletin->GPC['vsacb_editmessage'])."' WHERE id = '".$vsacb_getmessageinfo['id']."' ");
+
+				$vsacb_edit_coloropen = '';
+				$vsacb_edit_colorclose = '';
+				$vsacb_edit_boldopen = '';
+				$vsacb_edit_boldclose = '';
+				$vsacb_edit_italicopen = '';
+				$vsacb_edit_italicclose = '';
+				$vsacb_edit_underlineopen = '';
+				$vsacb_edit_underlineclose = '';
+
+				$vsacb_msg_edit = $vbulletin->db->query_first("SELECT id, message, textprop FROM " . TABLE_PREFIX . "vsa_chatbox WHERE id = '".$vbulletin->GPC['id']."' ");
+
+				$vbulletin->db->show_errors();
+
+				$vsacb_msg_edit['message'] = htmlspecialchars_uni($vsacb_msg_edit['message']);
+				$vsacb_msg_edit['textprop'] = unserialize($vsacb_msg_edit['textprop']);
+				if ($vsacb_msg_edit['textprop']['color'] AND $vbulletin->options['vsachatbox_colors_enabled'])
+				{
+					$vsacb_edit_coloropen = '[color='.$vsacb_msg_edit['textprop']['color'].']';
+					$vsacb_edit_colorclose = '[/color]';
+				}
+				if ($vsacb_msg_edit['textprop']['bold'])
+				{
+					$vsacb_edit_boldopen = '[b]';
+					$vsacb_edit_boldclose = '[/b]';
+				}
+				if ($vsacb_msg_edit['textprop']['italic'])
+				{
+					$vsacb_edit_italicopen = '[i]';
+					$vsacb_edit_italicclose = '[/i]';
+				}
+				if ($vsacb_msg_edit['textprop']['underline'])
+				{
+					$vsacb_edit_underlineopen = '[u]';
+					$vsacb_edit_underlineclose = '[/u]';
+				}
+
+				if ($vbulletin->options['vsachatbox_clickable_links'])
+				{
+					$vsacb_msg_edit_tow = VSacb_clickableLinks($vsacb_msg_edit['message']);
+				}
+				else
+				{
+					$vsacb_msg_edit_tow = $vsacb_msg_edit['message'];
+				}
+
+				$vsacb_msg_edit_styled = $vsacb_edit_coloropen.$vsacb_edit_boldopen.$vsacb_edit_italicopen.$vsacb_edit_underlineopen.$vsacb_msg_edit_tow.$vsacb_edit_underlineclose.$vsacb_edit_italicclose.$vsacb_edit_boldclose.$vsacb_edit_colorclose;
+				$vsacb_msg_edit_parsed = str_replace('\'', '&#39;', $vsacb_bbparser->do_parse($vsacb_msg_edit_styled,1,$vsacb_smilies_onoff,1,1,1));
+				unset($vsacb_msg_edit);
+				echo $vsacb_msg_edit_parsed;
+				exit;
+			}
+
+			if (($_REQUEST['do'] == 'vsacb_multidel') AND $vsacb_canmod)
+			{
+				$vbulletin->db->hide_errors();
+				$vbulletin->input->clean_gpc('r', 'cbdel', TYPE_ARRAY);		
+				if ($vbulletin->GPC['cbdel']!='')
+				{
+					$vsacb_delids = implode(',', $vbulletin->GPC['cbdel']);
+					if ($vsacb_delids)
+					{
+						$vbulletin->db->query_write(" DELETE FROM " . TABLE_PREFIX . "vsa_chatbox WHERE id IN($vsacb_delids) ");
+					}
+				}
+				$vbulletin->db->show_errors();
+				exec_header_redirect('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc');
+			}
+
+			if (($_REQUEST['do']=='vsacb_delall') AND $vsacb_candelall)
+			{
+				$vbulletin->db->hide_errors();
+				$vbulletin->db->query_write("TRUNCATE TABLE " . TABLE_PREFIX . "vsa_chatbox");
+				$vbulletin->db->show_errors();
+				if ($_SERVER['HTTP_REFERER'])
+				{
+					$vsacb_redto = $_SERVER['HTTP_REFERER'];
+				}
+				else
+				{
+					$vsacb_redto = 'misc.php?'.$vbulletin->session->vars['sessionurl'].'do=cchatbox';
+				}
+				exec_header_redirect($vsacb_redto);
+			}
+
+			if (($_REQUEST['do']=='vsacb_banuser') AND $vsacb_canmod)
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_usertoban = $vbulletin->input->clean_gpc('r', 'u', TYPE_UINT);
+				$vsacb_banuser = $vbulletin->options['vsachatbox_excluded_users'].','.$vsacb_usertoban;
+				$vsacb_banuser = str_replace(',,',',',$vsacb_banuser);
+				$vsacb_banuser = trim($vsacb_banuser, ',');
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "setting SET value = '".$vsacb_banuser."' WHERE varname = 'vsachatbox_excluded_users' ");
+				$vbulletin->db->show_errors();
+				require_once(DIR . '/includes/adminfunctions.php');
+				build_options();
+				exec_header_redirect('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc');
+			}
+
+			if (($_REQUEST['do']=='vsacb_unbanuser') AND $vsacb_canmod)
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_usertounban = $vbulletin->input->clean_gpc('r', 'u', TYPE_UINT);
+				$vsacb_unbanuser = str_replace($vsacb_usertounban,'',$vbulletin->options['vsachatbox_excluded_users']);
+				$vsacb_unbanuser = str_replace(',,',',',$vsacb_unbanuser);
+				$vsacb_unbanuser = trim($vsacb_unbanuser, ',');
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "setting SET value = '".$vsacb_unbanuser."' WHERE varname = 'vsachatbox_excluded_users' ");
+				$vbulletin->db->show_errors();
+				require_once(DIR . '/includes/adminfunctions.php');
+				build_options();
+				exec_header_redirect('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc');
+			}
+
+			if (($_REQUEST['do']=='vsacb_deluser') AND $vsacb_canmod)
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_usertodel = $vbulletin->input->clean_gpc('r', 'u', TYPE_UINT);	
+				$vbulletin->db->query_write(" DELETE FROM " . TABLE_PREFIX . "vsa_chatbox WHERE userid = '".$vsacb_usertodel."' ");
+				$vbulletin->db->show_errors();
+				exec_header_redirect('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc');
+			}
+
+			if ($_REQUEST['do']=='vsacb_delmess')
+			{
+				$vbulletin->db->hide_errors();
+				$vsacb_messtodel = $vbulletin->input->clean_gpc('r', 'm', TYPE_UINT);
+				$vsacb_getmessinfo = $vbulletin->db->query_first("SELECT id, userid from " . TABLE_PREFIX . "vsa_chatbox WHERE id = '".$vsacb_messtodel."' ");
+				if ((($vsacb_getmessinfo['userid']==$vbulletin->userinfo['userid']) AND $vbulletin->options['vsachatbox_users_candelete']) OR $vsacb_canmod)
+				{
+					$vbulletin->db->query_write(" DELETE FROM " . TABLE_PREFIX . "vsa_chatbox WHERE id = '".$vsacb_messtodel."' ");
+				}
+				$vbulletin->db->show_errors();
+				exec_header_redirect('misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc');
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - ChatBox - AI</title>
+			<hookname>online_location_unknown</hookname>
+			<phpcode><![CDATA[
+		$vsacb_checkactbox = strpos($userinfo['location'], 'cchatbox');
+		$vsacb_checkactarc = strpos($userinfo['location'], 'ccarc');
+		if ($vsacb_checkactbox !== false)
+		{
+			$handled = true;
+			$userinfo['action'] = $vbphrase['vsacb_viewing_chatbox'];
+			$userinfo['where'] = '<a href="'.$vbulletin->options['bburl'].'/misc.php?'.$vbulletin->session->vars['sessionurl'].'do=cchatbox">'.$vbphrase['vsacb_chatbox'].'</a>';
+		}
+		if ($vsacb_checkactarc !== false)
+		{
+			$handled = true;
+			$userinfo['action'] = $vbphrase['vsacb_viewing_archive'];
+			$userinfo['where'] = '<a href="'.$vbulletin->options['bburl'].'/misc.php?'.$vbulletin->session->vars['sessionurl'].'do=ccarc">'.$vbphrase['vsacb_archive'].'</a>';
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title><![CDATA[Valter's Hacks Template Group]]></title>
+			<hookname>template_groups</hookname>
+			<phpcode><![CDATA[$only['vsa_'] = 'Valter';]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="GLOBAL" fieldname="global">
+			<phrase name="more" date="0" username="" version=""><![CDATA[More]]></phrase>
+			<phrase name="vsacb_active_users_x" date="0" username="" version=""><![CDATA[Users active in last {1} minutes: {2} ({3} members and {4} guests)]]></phrase>
+			<phrase name="vsacb_archive" date="0" username="" version=""><![CDATA[ChatBox Archive]]></phrase>
+			<phrase name="vsacb_autoprune_note" date="0" username="" version=""><![CDATA[Messages older than {1} hours are automatically pruned from ChatBox.]]></phrase>
+			<phrase name="vsacb_ban_user" date="0" username="" version=""><![CDATA[Ban from ChatBox]]></phrase>
+			<phrase name="vsacb_banned_list" date="0" username="" version=""><![CDATA[Banned from ChatBox]]></phrase>
+			<phrase name="vsacb_busy" date="0" username="" version=""><![CDATA[Busy...]]></phrase>
+			<phrase name="vsacb_chatbox" date="0" username="" version=""><![CDATA[ChatBox]]></phrase>
+			<phrase name="vsacb_chatbox_full" date="0" username="" version=""><![CDATA[ChatBox Full]]></phrase>
+			<phrase name="vsacb_chatbox_note" date="0" username="" version=""><![CDATA[Ask your questions in the forums. The ChatBox is for small talk.]]></phrase>
+			<phrase name="vsacb_click_log" date="0" username="" version=""><![CDATA[Click here to Log-in/Log-out]]></phrase>
+			<phrase name="vsacb_colors" date="0" username="" version=""><![CDATA[Text Color]]></phrase>
+			<phrase name="vsacb_confirm_delete" date="0" username="" version=""><![CDATA[Are you sure to want to delete selected messages?]]></phrase>
+			<phrase name="vsacb_confirm_delete_all" date="0" username="" version=""><![CDATA[Are you sure to want to delete ALL messages?]]></phrase>
+			<phrase name="vsacb_confirm_delete_all_again" date="0" username="" version=""><![CDATA[This can not be undone! Proceed with deletion?]]></phrase>
+			<phrase name="vsacb_delete_all" date="0" username="" version=""><![CDATA[Delete All Messages]]></phrase>
+			<phrase name="vsacb_delete_mess" date="0" username="" version=""><![CDATA[Delete This Message]]></phrase>
+			<phrase name="vsacb_delete_selected" date="0" username="" version=""><![CDATA[Delete Selected]]></phrase>
+			<phrase name="vsacb_delete_user" date="0" username="" version=""><![CDATA[Delete all messages posted by]]></phrase>
+			<phrase name="vsacb_disable" date="0" username="" version=""><![CDATA[Disable]]></phrase>
+			<phrase name="vsacb_find_first_unread" date="0" username="" version=""><![CDATA[Find first unread message]]></phrase>
+			<phrase name="vsacb_find_your_last" date="0" username="" version=""><![CDATA[Find your last message]]></phrase>
+			<phrase name="vsacb_go_archive" date="0" username="" version=""><![CDATA[View ChatBox Archive]]></phrase>
+			<phrase name="vsacb_go_separate" date="0" username="" version=""><![CDATA[View ChatBox Full]]></phrase>
+			<phrase name="vsacb_goto_last" date="0" username="" version=""><![CDATA[Go to last message posted by {1}]]></phrase>
+			<phrase name="vsacb_idle" date="0" username="" version=""><![CDATA[Idle]]></phrase>
+			<phrase name="vsacb_inputbottom" date="0" username="" version=""><![CDATA[Below Messages]]></phrase>
+			<phrase name="vsacb_inputtop" date="0" username="" version=""><![CDATA[Above Messages]]></phrase>
+			<phrase name="vsacb_invisible" date="0" username="" version=""><![CDATA[Invisible]]></phrase>
+			<phrase name="vsacb_last_x_hours_messages" date="0" username="" version=""><![CDATA[Messages in the past {1} hours]]></phrase>
+			<phrase name="vsacb_loading" date="0" username="" version=""><![CDATA[Loading...]]></phrase>
+			<phrase name="vsacb_loc_message" date="0" username="" version=""><![CDATA[Locate this message in Archive]]></phrase>
+			<phrase name="vsacb_mod_options" date="0" username="" version=""><![CDATA[Mod]]></phrase>
+			<phrase name="vsacb_must_enter" date="0" username="" version=""><![CDATA[You must enter a message!]]></phrase>
+			<phrase name="vsacb_my_messages" date="0" username="" version=""><![CDATA[My Messages]]></phrase>
+			<phrase name="vsacb_no_messages" date="0" username="" version=""><![CDATA[No Messages]]></phrase>
+			<phrase name="vsacb_no_new_messages" date="0" username="" version=""><![CDATA[No new messages since your last visit]]></phrase>
+			<phrase name="vsacb_notlogged" date="0" username="" version=""><![CDATA[Not logged in (<a href="javascript:{1}">Log-In</a>)]]></phrase>
+			<phrase name="vsacb_remove_formatting" date="0" username="" version=""><![CDATA[Remove Text Formatting]]></phrase>
+			<phrase name="vsacb_search_chatbox" date="0" username="" version=""><![CDATA[Search Messages]]></phrase>
+			<phrase name="vsacb_showingsearch" date="0" username="" version=""><![CDATA[Search: Key Word(s): {1}]]></phrase>
+			<phrase name="vsacb_showinguser" date="0" username="" version=""><![CDATA[Showing user messages.]]></phrase>
+			<phrase name="vsacb_statistics" date="0" username="" version=""><![CDATA[Statistics]]></phrase>
+			<phrase name="vsacb_status" date="0" username="" version=""><![CDATA[Status]]></phrase>
+			<phrase name="vsacb_status_posting" date="0" username="" version=""><![CDATA[Posting Message]]></phrase>
+			<phrase name="vsacb_status_refreshing" date="0" username="" version=""><![CDATA[Refreshing Messages]]></phrase>
+			<phrase name="vsacb_switchtoall" date="0" username="" version=""><![CDATA[<a href="misc.php?do=ccarc">Click here</a> to view all messages]]></phrase>
+			<phrase name="vsacb_top_x_chatters" date="0" username="" version=""><![CDATA[Top Chatters]]></phrase>
+			<phrase name="vsacb_total_messages" date="0" username="" version=""><![CDATA[Total Messages]]></phrase>
+			<phrase name="vsacb_unban" date="0" username="" version=""><![CDATA[Click to Unban]]></phrase>
+			<phrase name="vsacb_unban_user" date="0" username="" version=""><![CDATA[Unban from ChatBox]]></phrase>
+			<phrase name="vsacb_view_user" date="0" username="" version=""><![CDATA[View all messages posted by {1}]]></phrase>
+			<phrase name="vsacb_viewing_archive" date="0" username="" version=""><![CDATA[Viewing ChatBox Archive]]></phrase>
+			<phrase name="vsacb_viewing_chatbox" date="0" username="" version=""><![CDATA[Viewing ChatBox]]></phrase>
+			<phrase name="vsacb_x_new_messages" date="0" username="" version=""><![CDATA[New messages since your last visit: {1}]]></phrase>
+		</phrasetype>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="setting_vsachatbox_align_username_desc" date="0" username="" version=""><![CDATA[Align messages to the usernames]]></phrase>
+			<phrase name="setting_vsachatbox_archive_perpage_desc" date="0" username="" version=""><![CDATA[Messages per page in Archive]]></phrase>
+			<phrase name="setting_vsachatbox_auto_prune_desc" date="0" username="" version=""><![CDATA[Auto prune messages older than X hours - Set X (Blank to disable)]]></phrase>
+			<phrase name="setting_vsachatbox_auto_prune_title" date="0" username="" version=""><![CDATA[Other Options]]></phrase>
+			<phrase name="setting_vsachatbox_auto_refresh_guests_desc" date="0" username="" version=""><![CDATA[Enable auto-refresh for guests and users not able to post]]></phrase>
+			<phrase name="setting_vsachatbox_auto_refresh_messages_desc" date="0" username="" version=""><![CDATA[Messages auto-refresh interval in seconds<br />Note: Don't set this value too low because of server load / default 10]]></phrase>
+			<phrase name="setting_vsachatbox_auto_refresh_messages_title" date="0" username="" version=""><![CDATA[Auto-refresh & Status]]></phrase>
+			<phrase name="setting_vsachatbox_auto_refresh_users_desc" date="0" username="" version=""><![CDATA[Show Active users - auto-refresh interval in seconds<br />Note: Don't set this value too low because of server load / default 30]]></phrase>
+			<phrase name="setting_vsachatbox_autoinsertlink_desc" date="0" username="" version=""><![CDATA[Automatically add link to ChatBox Full to NavBar]]></phrase>
+			<phrase name="setting_vsachatbox_banned_tags_desc" date="0" username="" version=""><![CDATA[Banned BB Tags (comma separated, example: img, code)]]></phrase>
+			<phrase name="setting_vsachatbox_can_mod_desc" date="0" username="" version=""><![CDATA[Groups able to moderate ChatBox (comma separated usergroup IDs)]]></phrase>
+			<phrase name="setting_vsachatbox_cannot_edit_desc" date="0" username="" version=""><![CDATA[Usergroups NOT able to edit messages (Banned automatically excluded)]]></phrase>
+			<phrase name="setting_vsachatbox_canviewonly_desc" date="0" username="" version=""><![CDATA[Usergroups able to view ChatBox but not post messages]]></phrase>
+			<phrase name="setting_vsachatbox_canviewonly_title" date="0" username="" version=""><![CDATA[Permissions]]></phrase>
+			<phrase name="setting_vsachatbox_charlimit_desc" date="0" username="" version=""><![CDATA[Message length limit (characters)]]></phrase>
+			<phrase name="setting_vsachatbox_charlimit_title" date="0" username="" version=""><![CDATA[Posting options]]></phrase>
+			<phrase name="setting_vsachatbox_clickable_links_desc" date="0" username="" version=""><![CDATA[Automatically parse links in messages]]></phrase>
+			<phrase name="setting_vsachatbox_code_maxwidth_desc" date="0" username="" version=""><![CDATA[Width of [code], [php] and [html] BB code blocks (in pixels)]]></phrase>
+			<phrase name="setting_vsachatbox_collapsed_always_desc" date="0" username="" version=""><![CDATA[ChatBox always collapsed by default (ChatBox Full not affected)]]></phrase>
+			<phrase name="setting_vsachatbox_colors_enabled_desc" date="0" username="" version=""><![CDATA[Allow custom colors?]]></phrase>
+			<phrase name="setting_vsachatbox_dateformat_desc" date="0" username="" version=""><![CDATA[Date format (blank to disable)]]></phrase>
+			<phrase name="setting_vsachatbox_enable_product_desc" date="0" username="" version=""><![CDATA[Enable Product]]></phrase>
+			<phrase name="setting_vsachatbox_enable_product_title" date="0" username="" version=""><![CDATA[Main Options]]></phrase>
+			<phrase name="setting_vsachatbox_excluded_groups_desc" date="0" username="" version=""><![CDATA[Usergroups NOT able to view ChatBox (comma separated ID list)]]></phrase>
+			<phrase name="setting_vsachatbox_excluded_pc_desc" date="0" username="" version=""><![CDATA[Users with post count less than X can not view ChatBox - Set X]]></phrase>
+			<phrase name="setting_vsachatbox_excluded_users_desc" date="0" username="" version=""><![CDATA[Users banned from ChatBox (comma separated UserID list)<br /><br />Note: When user is banned via menu in ChatBox Archive this field will be automatically updated]]></phrase>
+			<phrase name="setting_vsachatbox_height_desc" date="0" username="" version=""><![CDATA[Message listing area height (ChatBox)]]></phrase>
+			<phrase name="setting_vsachatbox_height_full_desc" date="0" username="" version=""><![CDATA[Message listing area height (ChatBox Full)]]></phrase>
+			<phrase name="setting_vsachatbox_logout_dur_desc" date="0" username="" version=""><![CDATA[Log-out user from ChatBox after X minutes of inactivity]]></phrase>
+			<phrase name="setting_vsachatbox_logout_init_desc" date="0" username="" version=""><![CDATA[Logged-out by default]]></phrase>
+			<phrase name="setting_vsachatbox_mecolor_desc" date="0" username="" version=""><![CDATA[Color used for "/me" user action]]></phrase>
+			<phrase name="setting_vsachatbox_messages_main_desc" date="0" username="" version=""><![CDATA[Messages to show in ChatBox/ChatBox Full]]></phrase>
+			<phrase name="setting_vsachatbox_messages_main_title" date="0" username="" version=""><![CDATA[Message View]]></phrase>
+			<phrase name="setting_vsachatbox_newmess_dur_desc" date="0" username="" version=""><![CDATA[Seconds to show "new messages since last visit" stats]]></phrase>
+			<phrase name="setting_vsachatbox_page_loc_desc" date="0" username="" version=""><![CDATA[Position on page (Disable if you add ChatBox manually in templates)]]></phrase>
+			<phrase name="setting_vsachatbox_pos_input_desc" date="0" username="" version=""><![CDATA[Input box position]]></phrase>
+			<phrase name="setting_vsachatbox_pos_statusbar_desc" date="0" username="" version=""><![CDATA[Status bar position]]></phrase>
+			<phrase name="setting_vsachatbox_reverse_messages_arc_desc" date="0" username="" version=""><![CDATA[Reverse message order in CB Archive (newest at bottom)]]></phrase>
+			<phrase name="setting_vsachatbox_reverse_messages_desc" date="0" username="" version=""><![CDATA[Reverse message order in ChatBox (newest at bottom)]]></phrase>
+			<phrase name="setting_vsachatbox_script_locs_desc" date="0" username="" version=""><![CDATA[Show ChatBox on pages (comma separated THIS_SCRIPT locations)<br />Blank to show on all pages (not recommended because of server load)]]></phrase>
+			<phrase name="setting_vsachatbox_smilies_parse_desc" date="0" username="" version=""><![CDATA[Automatically parse smilie codes in messages]]></phrase>
+			<phrase name="setting_vsachatbox_smilies_random_desc" date="0" username="" version=""><![CDATA[Random smilies]]></phrase>
+			<phrase name="setting_vsachatbox_smiliesclip_desc" date="0" username="" version=""><![CDATA[Smilie clipping in smiliebox (in pixels)]]></phrase>
+			<phrase name="setting_vsachatbox_smiliesinit_desc" date="0" username="" version=""><![CDATA[Smilies to show on startup (others are loaded when user clicks "More")]]></phrase>
+			<phrase name="setting_vsachatbox_smiliesperrow_desc" date="0" username="" version=""><![CDATA[Smilies per row]]></phrase>
+			<phrase name="setting_vsachatbox_smiliestotal_desc" date="0" username="" version=""><![CDATA[Total smilies available (0 to disable smiliebox, 1 to use all smilies)]]></phrase>
+			<phrase name="setting_vsachatbox_stats_lastxhours_desc" date="0" username="" version=""><![CDATA[Messages in last X hours - Set X]]></phrase>
+			<phrase name="setting_vsachatbox_status_enable_desc" date="0" username="" version=""><![CDATA[Show system status]]></phrase>
+			<phrase name="setting_vsachatbox_template_locs_desc" date="0" username="" version=""><![CDATA[Show ChatBox in templates (comma separated template names)]]></phrase>
+			<phrase name="setting_vsachatbox_textcolors_desc" date="0" username="" version=""><![CDATA[Colors available in drop-down menu]]></phrase>
+			<phrase name="setting_vsachatbox_textsizes_desc" date="0" username="" version=""><![CDATA[Text sizes available in drop-down menu]]></phrase>
+			<phrase name="setting_vsachatbox_time_enable_desc" date="0" username="" version=""><![CDATA[Show message time in ChatBox (Archive not affected)]]></phrase>
+			<phrase name="setting_vsachatbox_timeformat_desc" date="0" username="" version=""><![CDATA[Time format]]></phrase>
+			<phrase name="setting_vsachatbox_topx_results_desc" date="0" username="" version=""><![CDATA[Top X Chatters - Set X]]></phrase>
+			<phrase name="setting_vsachatbox_topx_results_title" date="0" username="" version=""><![CDATA[Statistics]]></phrase>
+			<phrase name="setting_vsachatbox_users_candelete_desc" date="0" username="" version=""><![CDATA[Allow users to delete their own messages]]></phrase>
+			<phrase name="setting_vsachatbox_viewers_timecut_desc" date="0" username="" version=""><![CDATA[Show Active users - time cut-off (in minutes)]]></phrase>
+			<phrase name="settinggroup_vsacboptions" date="0" username="" version=""><![CDATA[VSa - ChatBox]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="vsacboptions" displayorder="65535">
+			<setting varname="vsachatbox_enable_product" displayorder="1">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_script_locs" displayorder="5">
+				<datatype>free</datatype>
+				<defaultvalue>index</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_template_locs" displayorder="10">
+				<datatype>free</datatype>
+				<defaultvalue>FORUMHOME</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_page_loc" displayorder="15">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+0|Disabled
+1|Below NavBar
+2|Below Forums
+3|Above Footer</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_pos_input" displayorder="20">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+1|vsacb_inputtop
+2|vsacb_inputbottom</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_pos_statusbar" displayorder="25">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+1|vsacb_inputtop
+2|vsacb_inputbottom</optioncode>
+				<defaultvalue>2</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_messages_main" displayorder="30">
+				<datatype>number</datatype>
+				<defaultvalue>30</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_archive_perpage" displayorder="35">
+				<datatype>number</datatype>
+				<defaultvalue>25</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_reverse_messages" displayorder="40">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_reverse_messages_arc" displayorder="41">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_align_username" displayorder="45">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_height" displayorder="50">
+				<datatype>number</datatype>
+				<defaultvalue>100</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_height_full" displayorder="55">
+				<datatype>number</datatype>
+				<defaultvalue>400</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_code_maxwidth" displayorder="60">
+				<datatype>number</datatype>
+				<defaultvalue>450</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_dateformat" displayorder="65">
+				<datatype>free</datatype>
+				<defaultvalue>d-m</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_timeformat" displayorder="70">
+				<datatype>free</datatype>
+				<defaultvalue>H:i</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_time_enable" displayorder="75">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_mecolor" displayorder="80">
+				<datatype>free</datatype>
+				<defaultvalue>Red</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_auto_refresh_messages" displayorder="85">
+				<datatype>number</datatype>
+				<defaultvalue>10</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_auto_refresh_guests" displayorder="90">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_logout_dur" displayorder="95">
+				<datatype>number</datatype>
+				<defaultvalue>5</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_logout_init" displayorder="96">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_status_enable" displayorder="100">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_viewers_timecut" displayorder="105">
+				<datatype>number</datatype>
+				<defaultvalue>10</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_auto_refresh_users" displayorder="110">
+				<datatype>number</datatype>
+				<defaultvalue>30</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_charlimit" displayorder="115">
+				<datatype>number</datatype>
+				<defaultvalue>255</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_textsizes" displayorder="120">
+				<datatype>free</datatype>
+				<defaultvalue>11,12,14,16</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smiliestotal" displayorder="125">
+				<datatype>number</datatype>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smiliesinit" displayorder="130">
+				<datatype>number</datatype>
+				<defaultvalue>10</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smiliesperrow" displayorder="135">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+1|1
+3|3
+5|5
+7|7
+9|9
+11|11
+13|13
+15|15</optioncode>
+				<defaultvalue>5</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smiliesclip" displayorder="140">
+				<datatype>number</datatype>
+				<defaultvalue>30</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smilies_parse" displayorder="145">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_smilies_random" displayorder="150">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_clickable_links" displayorder="155">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_colors_enabled" displayorder="160">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_textcolors" displayorder="165">
+				<optioncode>textarea</optioncode>
+				<defaultvalue>Black, Gold, Khaki, Orange, LightPink, Salmon, Tomato, Red, Brown, Maroon, DarkGreen, DarkCyan, LightSeaGreen, LawnGreen, MediumSeaGreen, BlueViolet, Cyan, Blue, DodgerBlue, LightSkyBlue, White, DimGray, DarkGray</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_canviewonly" displayorder="170">
+				<datatype>free</datatype>
+				<defaultvalue>8</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_excluded_groups" displayorder="175">
+				<datatype>free</datatype>
+				<defaultvalue>1,8</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_excluded_users" displayorder="180">
+				<optioncode>textarea</optioncode>
+			</setting>
+			<setting varname="vsachatbox_excluded_pc" displayorder="185">
+				<datatype>number</datatype>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_can_mod" displayorder="190">
+				<datatype>free</datatype>
+				<defaultvalue>5,6,7</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_users_candelete" displayorder="195">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_cannot_edit" displayorder="200">
+				<datatype>free</datatype>
+				<defaultvalue>1,8</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_banned_tags" displayorder="205">
+				<datatype>free</datatype>
+			</setting>
+			<setting varname="vsachatbox_topx_results" displayorder="210">
+				<datatype>number</datatype>
+				<defaultvalue>5</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_stats_lastxhours" displayorder="215">
+				<datatype>number</datatype>
+				<defaultvalue>12</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_newmess_dur" displayorder="220">
+				<datatype>number</datatype>
+				<defaultvalue>10</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_auto_prune" displayorder="225">
+				<datatype>free</datatype>
+			</setting>
+			<setting varname="vsachatbox_collapsed_always" displayorder="230">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="vsachatbox_autoinsertlink" displayorder="235">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+		</settinggroup>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+</product>
